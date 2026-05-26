@@ -1,0 +1,36 @@
+{
+  "name": "粑粑升职记",
+  "appid": "__UNI__BABA001",
+  "description": "记录拉屎时长，计算拉屎工资，让每次如厕都有成就感",
+  "versionName": "0.1.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "mp-weixin": {
+    "appid": "",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "minified": true,
+      "postcss": true
+    },
+    "usingComponents": true,
+    "optimization": {
+      "subPackages": true
+    }
+  },
+  "app-plus": {
+    "usingComponents": true,
+    "modules": {},
+    "distribute": {
+      "android": {
+        "permissions": [
+          "<uses-permission android:name=\"android.permission.VIBRATE\"/>"
+        ]
+      },
+      "ios": {}
+    }
+  },
+  "uniCloud": {
+    "provider": "aliyun"
+  }
+}
