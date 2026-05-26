@@ -1,0 +1,6 @@
+{
+  "name": "user-center",
+  "dependencies": {
+    "uni-id-common": "latest"
+  }
+}

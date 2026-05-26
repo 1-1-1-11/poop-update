@@ -1,0 +1,8 @@
+{
+  "name": "push-scheduler",
+  "trigger": {
+    "type": "timer",
+    "config": "0 0 0 * * 1",
+    "note": "每周一 UTC 0:00 = 北京时间 08:00 执行周报生成"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "collection_indexes": {
+    "poop-sessions": {
+      "indexes": [
+        {
+          "MemberType": "compound",
+          "IndexName": "user_start_time",
+          "IndexKeys": {
+            "user_id": 1,
+            "start_time": -1
+          }
+        },
+        {
+          "MemberType": "compound",
+          "IndexName": "user_created_at",
+          "IndexKeys": {
+            "user_id": 1,
+            "created_at": -1
+          }
+        }
+      ]
+    },
+    "weekly-reports": {
+      "indexes": [
+        {
+          "MemberType": "compound",
+          "IndexName": "user_week_unique",
+          "IndexKeys": {
+            "user_id": 1,
+            "week_start": 1
+          },
+          "IsUnique": true
+        }
+      ]
+    },
+    "groups": {
+      "indexes": [
+        {
+          "MemberType": "single",
+          "IndexName": "invite_code_unique",
+          "IndexKeys": {
+            "invite_code": 1
+          },
+          "IsUnique": true
+        }
+      ]
+    },
+    "users": {
+      "indexes": [
+        {
+          "MemberType": "single",
+          "IndexName": "weekly_push",
+          "IndexKeys": {
+            "settings.weekly_report_push": 1
+          }
+        }
+      ]
+    }
+  }
+}

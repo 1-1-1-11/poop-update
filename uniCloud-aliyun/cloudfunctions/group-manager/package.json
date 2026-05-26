@@ -1,0 +1,6 @@
+{
+  "name": "group-manager",
+  "dependencies": {
+    "uni-id-common": "latest"
+  }
+}
