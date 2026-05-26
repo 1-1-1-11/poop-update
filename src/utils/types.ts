@@ -17,7 +17,6 @@ export interface User {
   _id: string
   nickname: string
   avatar_url: string
-  wechat_openid?: string
   monthly_salary: number
   work_days_per_month: number
   work_hours_per_day: number
@@ -29,6 +28,7 @@ export interface User {
   total_sessions: number
   total_duration_seconds: number
   streak_days: number
+  last_session_date: string
   badges: string[]
   group_ids: string[]
   settings: UserSettings
@@ -105,12 +105,10 @@ export interface Badge {
   rarity: BadgeRarity
 }
 
-export interface TitleLevel {
+export interface TitleDef {
   level: number
   title: string
-  min_xp: number
-  avatar: string
-  unlock_features: string[]
+  minXP: number
 }
 
 export interface Group {
@@ -129,6 +127,49 @@ export interface LeaderboardEntry {
   nickname: string
   avatar_url: string
   current_title: string
-  value: number
+  total_earnings: number
+  total_duration: number
+  total_sessions: number
   rank: number
+}
+
+export interface SessionCreateResult {
+  session: PoopSession
+  feedback_type: FeedbackType
+  xp_earned: number
+  total_xp: number
+  current_level: number
+  current_title: string
+  leveled_up: boolean
+  streak_days: number
+}
+
+export interface AnnualReport {
+  year: number
+  total_sessions: number
+  total_duration_seconds: number
+  total_earnings: number
+  avg_comfort: number
+  avg_daily_sessions: number
+  best_session_earnings: number
+  peak_hour: number
+  active_days: number
+  monthly_stats: { month: number; sessions: number; earnings: number; duration: number }[]
+  salary_changes: SalaryRecord[]
+  purchasing_comparisons: PurchaseComparison[]
+  hourly_distribution: number[]
+}
+
+export interface StatsData {
+  period: string
+  total_sessions: number
+  total_duration_seconds: number
+  total_earnings: number
+  avg_duration_seconds: number
+  avg_comfort: number
+  avg_earnings: number
+  best_session_earnings: number
+  daily_distribution: { date: string; sessions: number; earnings: number; duration: number; avg_comfort: number }[]
+  hourly_distribution: number[]
+  comfort_trend: { date: string; avg_comfort: number }[]
 }

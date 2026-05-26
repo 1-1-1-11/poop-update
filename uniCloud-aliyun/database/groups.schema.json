@@ -2,9 +2,9 @@
   "bpiVersion": 2,
   "permission": {
     "read": "auth.uid in doc.member_ids",
-    "create": true,
-    "update": "doc.creator_id == auth.uid",
-    "delete": "doc.creator_id == auth.uid"
+    "create": false,
+    "update": false,
+    "delete": false
   },
   "required": ["name", "creator_id", "invite_code"],
   "properties": {

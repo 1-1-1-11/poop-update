@@ -1,8 +1,10 @@
 'use strict'
 
 const db = uniCloud.database()
+const dbCmd = db.command
 const usersCollection = db.collection('users')
 const { getTitleByXP, TITLE_LEVELS } = require('../../common/salary-calc')
+const { getAuthUid } = require('../../common/utils')
 
 exports.main = async (event, context) => {
   const { action, params } = event
@@ -24,26 +26,42 @@ exports.main = async (event, context) => {
 }
 
 async function register(params, context) {
-  const { nickname, avatar_url, wechat_openid, monthly_salary, work_days_per_month, work_hours_per_day } = params
-
-  if (!nickname || !monthly_salary) {
-    return { code: 400, msg: '昵称和月薪为必填项' }
+  const { uid, errMsg } = await getAuthUid(context)
+  if (!uid) {
+    return { code: 401, msg: errMsg }
   }
 
-  if (monthly_salary < 0 || monthly_salary > 10000000) {
+  const { nickname, monthly_salary, work_days_per_month, work_hours_per_day } = params
+
+  if (!nickname || nickname.length < 1 || nickname.length > 32) {
+    return { code: 400, msg: '昵称1-32字' }
+  }
+
+  if (monthly_salary === undefined || monthly_salary < 0 || monthly_salary > 10000000) {
     return { code: 400, msg: '月薪范围: 0 - 10,000,000' }
   }
 
+  const days = work_days_per_month || 22
+  const hours = work_hours_per_day || 8
+  if (days < 1 || days > 31) return { code: 400, msg: '月工作天数: 1-31' }
+  if (hours < 1 || hours > 24) return { code: 400, msg: '日工作小时: 1-24' }
+
+  const existing = await usersCollection.doc(uid).get()
+  if (existing.data && existing.data.length > 0) {
+    return { code: 0, msg: '用户已存在', data: { user: existing.data[0] } }
+  }
+
   const now = Date.now()
+  const salary = Math.round(monthly_salary)
   const user = {
+    _id: uid,
     nickname,
-    avatar_url: avatar_url || '',
-    wechat_openid: wechat_openid || '',
-    monthly_salary: Math.round(monthly_salary),
-    work_days_per_month: work_days_per_month || 22,
-    work_hours_per_day: work_hours_per_day || 8,
+    avatar_url: '',
+    monthly_salary: salary,
+    work_days_per_month: days,
+    work_hours_per_day: hours,
     salary_history: [{
-      monthly_salary: Math.round(monthly_salary),
+      monthly_salary: salary,
       effective_date: now,
       note: '初始设置',
     }],
@@ -54,6 +72,7 @@ async function register(params, context) {
     total_sessions: 0,
     total_duration_seconds: 0,
     streak_days: 0,
+    last_session_date: '',
     badges: [],
     group_ids: [],
     settings: {
@@ -68,31 +87,27 @@ async function register(params, context) {
     updated_at: now,
   }
 
-  const result = await usersCollection.add(user)
-  user._id = result.id
-
+  await usersCollection.add(user)
   return { code: 0, msg: '注册成功', data: { user } }
 }
 
 async function getProfile(context) {
-  const uid = context.CLIENTINFO && context.CLIENTINFO.uid
-  if (!uid) {
-    return { code: 401, msg: '未登录' }
-  }
+  const { uid, errMsg } = await getAuthUid(context)
+  if (!uid) return { code: 401, msg: errMsg }
 
   const result = await usersCollection.doc(uid).get()
   if (!result.data || result.data.length === 0) {
     return { code: 404, msg: '用户不存在' }
   }
 
-  return { code: 0, data: { user: result.data[0] } }
+  const user = result.data[0]
+  delete user.wechat_openid
+  return { code: 0, data: { user } }
 }
 
 async function updateSalary(params, context) {
-  const uid = context.CLIENTINFO && context.CLIENTINFO.uid
-  if (!uid) {
-    return { code: 401, msg: '未登录' }
-  }
+  const { uid, errMsg } = await getAuthUid(context)
+  if (!uid) return { code: 401, msg: errMsg }
 
   const { monthly_salary, work_days_per_month, work_hours_per_day, note } = params
 
@@ -100,32 +115,28 @@ async function updateSalary(params, context) {
     return { code: 400, msg: '月薪范围: 0 - 10,000,000' }
   }
 
-  const now = Date.now()
-  const userRes = await usersCollection.doc(uid).get()
-  if (!userRes.data || userRes.data.length === 0) {
-    return { code: 404, msg: '用户不存在' }
+  if (work_days_per_month !== undefined && (work_days_per_month < 1 || work_days_per_month > 31)) {
+    return { code: 400, msg: '月工作天数: 1-31' }
+  }
+  if (work_hours_per_day !== undefined && (work_hours_per_day < 1 || work_hours_per_day > 24)) {
+    return { code: 400, msg: '日工作小时: 1-24' }
   }
 
-  const user = userRes.data[0]
+  const now = Date.now()
   const newSalary = Math.round(monthly_salary)
-  const oldSalary = user.monthly_salary
 
   const updateData = {
     monthly_salary: newSalary,
     updated_at: now,
   }
-
   if (work_days_per_month) updateData.work_days_per_month = work_days_per_month
   if (work_hours_per_day) updateData.work_hours_per_day = work_hours_per_day
 
-  if (newSalary !== oldSalary) {
-    const salaryRecord = {
-      monthly_salary: newSalary,
-      effective_date: now,
-      note: note || (newSalary > oldSalary ? '升职加薪！' : '薪资调整'),
-    }
-    updateData.salary_history = [...(user.salary_history || []), salaryRecord]
-  }
+  updateData.salary_history = dbCmd.push({
+    monthly_salary: newSalary,
+    effective_date: now,
+    note: note || '薪资调整',
+  })
 
   await usersCollection.doc(uid).update(updateData)
 
@@ -134,10 +145,8 @@ async function updateSalary(params, context) {
 }
 
 async function getSalaryHistory(context) {
-  const uid = context.CLIENTINFO && context.CLIENTINFO.uid
-  if (!uid) {
-    return { code: 401, msg: '未登录' }
-  }
+  const { uid, errMsg } = await getAuthUid(context)
+  if (!uid) return { code: 401, msg: errMsg }
 
   const result = await usersCollection.doc(uid).field({ salary_history: true }).get()
   if (!result.data || result.data.length === 0) {
@@ -148,10 +157,8 @@ async function getSalaryHistory(context) {
 }
 
 async function updateSettings(params, context) {
-  const uid = context.CLIENTINFO && context.CLIENTINFO.uid
-  if (!uid) {
-    return { code: 401, msg: '未登录' }
-  }
+  const { uid, errMsg } = await getAuthUid(context)
+  if (!uid) return { code: 401, msg: errMsg }
 
   const { settings } = params
   if (!settings || typeof settings !== 'object') {

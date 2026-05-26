@@ -1,6 +1,8 @@
-# 粑粑升职记 - API 接口文档
+# 粑粑升职记 - API 接口文档 v2
 
 > 后端：uniCloud 阿里云 | 调用方式：`uniCloud.callFunction({ name, data: { action, params } })`
+>
+> **认证方式**：前端通过 uni-id 登录后获取 token，调用云函数时自动携带。后端通过 `uni-id-common.checkToken(context.UNIID_TOKEN)` 解析用户身份。所有需登录接口在 token 无效时返回 `{ code: 401, msg: "..." }`。
 
 ---
 
@@ -8,33 +10,23 @@
 
 ### 1.1 register - 注册/初始化用户
 
-```js
-uniCloud.callFunction({
-  name: 'user-center',
-  data: {
-    action: 'register',
-    params: {
-      nickname: '拉屎小能手',        // string, 必填, 1-32字
-      avatar_url: 'https://...',     // string, 可选
-      wechat_openid: 'oXXXX',       // string, 可选
-      monthly_salary: 15000,         // number, 必填, 0-10000000
-      work_days_per_month: 22,       // number, 可选, 默认22
-      work_hours_per_day: 8,         // number, 可选, 默认8
-    }
-  }
-})
-```
+> 需已通过 uni-id 登录获取 token。注册时用 token 中的 uid 作为用户 `_id`，幂等操作（重复调用返回已有用户）。
 
-**返回：**
-```json
+```js
 {
-  "code": 0,
-  "msg": "注册成功",
-  "data": {
-    "user": { /* 完整User对象 */ }
+  action: 'register',
+  params: {
+    nickname: '拉屎小能手',        // string, 必填, 1-32字
+    monthly_salary: 15000,         // number, 必填, 0-10000000
+    work_days_per_month: 22,       // number, 可选, 默认22, 范围1-31
+    work_hours_per_day: 8,         // number, 可选, 默认8, 范围1-24
   }
 }
 ```
+
+**返回：** `{ code: 0, msg: "注册成功", data: { user } }`
+
+> **注意**：`work_days_per_month` 和 `work_hours_per_day` 必须 >= 1，否则薪资计算会产生除零错误。
 
 ### 1.2 getProfile - 获取用户信息
 
@@ -42,7 +34,7 @@ uniCloud.callFunction({
 { action: 'getProfile', params: {} }
 ```
 
-**返回：** `{ code: 0, data: { user: {...} } }`
+**返回：** `{ code: 0, data: { user } }` （不包含 wechat_openid）
 
 ### 1.3 updateSalary - 更新薪资
 
@@ -50,17 +42,17 @@ uniCloud.callFunction({
 {
   action: 'updateSalary',
   params: {
-    monthly_salary: 20000,           // number, 必填
-    work_days_per_month: 22,         // number, 可选
-    work_hours_per_day: 8,           // number, 可选
-    note: '升职加薪！'               // string, 可选, 变更备注
+    monthly_salary: 20000,           // number, 必填, 0-10000000
+    work_days_per_month: 22,         // number, 可选, 范围1-31
+    work_hours_per_day: 8,           // number, 可选, 范围1-24
+    note: '升职加薪！'               // string, 可选
   }
 }
 ```
 
-**返回：** `{ code: 0, msg: "薪资更新成功", data: { user: {...} } }`
+**返回：** `{ code: 0, msg: "薪资更新成功", data: { user } }`
 
-> 如果新薪资与旧薪资不同，自动追加 salary_history 记录
+> 每次调用都追加 salary_history 记录（使用 `dbCmd.push` 原子操作）。
 
 ### 1.4 getSalaryHistory - 获取薪资变更历史
 
@@ -68,18 +60,7 @@ uniCloud.callFunction({
 { action: 'getSalaryHistory', params: {} }
 ```
 
-**返回：**
-```json
-{
-  "code": 0,
-  "data": {
-    "history": [
-      { "monthly_salary": 15000, "effective_date": 1716681600000, "note": "初始设置" },
-      { "monthly_salary": 20000, "effective_date": 1719360000000, "note": "升职加薪！" }
-    ]
-  }
-}
-```
+**返回：** `{ code: 0, data: { history: SalaryRecord[] } }`
 
 ### 1.5 updateSettings - 更新用户设置
 
@@ -88,16 +69,18 @@ uniCloud.callFunction({
   action: 'updateSettings',
   params: {
     settings: {
-      long_sit_alert: true,          // bool, 久蹲提醒
-      long_sit_minutes: 20,          // int, 提醒阈值(分钟)
-      hydration_reminder: false,     // bool, 喝水提醒
-      weekly_report_push: true,      // bool, 周报推送
-      sound_enabled: true,           // bool, 音效
-      bgm_enabled: false,            // bool, 背景音乐
+      long_sit_alert: true,
+      long_sit_minutes: 20,
+      hydration_reminder: false,
+      weekly_report_push: true,
+      sound_enabled: true,
+      bgm_enabled: false,
     }
   }
 }
 ```
+
+**返回：** `{ code: 0, msg: "设置已更新" }`
 
 ---
 
@@ -109,10 +92,10 @@ uniCloud.callFunction({
 {
   action: 'create',
   params: {
-    start_time: 1716681600000,       // timestamp(ms), 必填
+    start_time: 1716681600000,       // timestamp(ms), 必填, 不能是未来时间
     end_time: 1716682200000,         // timestamp(ms), 必填
     comfort_level: 4,                // int 1-5, 必填
-    note: '今天很顺畅'               // string, 可选
+    note: '今天很顺畅'               // string, 可选, 最长200字
   }
 }
 ```
@@ -121,17 +104,8 @@ uniCloud.callFunction({
 ```json
 {
   "code": 0,
-  "msg": "记录成功",
   "data": {
-    "session": {
-      "_id": "xxx",
-      "duration_seconds": 600,
-      "earnings": 14.20,
-      "feedback_type": "praise",
-      "xp_earned": 28,
-      "comfort_level": 4,
-      "is_work_hours": true
-    },
+    "session": { /* PoopSession */ },
     "feedback_type": "praise",
     "xp_earned": 28,
     "total_xp": 128,
@@ -144,9 +118,17 @@ uniCloud.callFunction({
 ```
 
 > **前端提示：**
-> - `feedback_type` 用于决定播放哪个动画（praise=烟花, encourage=鼓励, normal=普通）
-> - `leveled_up=true` 时播放升级动画
-> - 创建记录后应接着调用 `achievement-checker.check` 检查新徽章
+> - `feedback_type` 决定播放哪个 Lottie 动画（praise=烟花, encourage=鼓励, normal=普通）
+> - `leveled_up=true` 时播放升级 Lottie 动画
+> - 创建成功后需接着调用 `achievement-checker.check` 检查新徽章
+> - 用户计数器使用 `dbCmd.inc()` 原子更新，无竞态风险
+> - 所有时间计算使用 UTC+8（北京时间）
+
+**校验规则：**
+- `start_time` 不能超过当前时间 + 1分钟
+- `end_time > start_time`
+- 时长 1秒 ~ 7200秒（2小时）
+- 用户的 `work_days_per_month` 和 `work_hours_per_day` 必须 >= 1
 
 ### 2.2 list - 查询记录列表
 
@@ -156,93 +138,35 @@ uniCloud.callFunction({
   params: {
     page: 1,                         // int, 默认1
     limit: 20,                       // int, 默认20, 最大50
-    date_start: 1716595200000,       // timestamp, 可选, 筛选起始
-    date_end: 1717200000000,         // timestamp, 可选, 筛选结束
+    date_start: 1716595200000,       // timestamp, 可选
+    date_end: 1717200000000,         // timestamp, 可选
   }
 }
 ```
 
-**返回：**
-```json
-{
-  "code": 0,
-  "data": {
-    "sessions": [ /* PoopSession[] */ ],
-    "total": 42,
-    "page": 1,
-    "limit": 20,
-    "has_more": true
-  }
-}
-```
+**返回：** `{ code: 0, data: { sessions[], total, page, limit, has_more } }`
 
 ### 2.3 stats - 获取统计数据
 
 ```js
-{
-  action: 'stats',
-  params: {
-    period: 'week'                   // 'week' | 'month' | 'year' | 'all'
-  }
-}
+{ action: 'stats', params: { period: 'week' } }
+// period: 'week' | 'month' | 'year' | 'all'
 ```
 
-**返回：**
-```json
-{
-  "code": 0,
-  "data": {
-    "period": "week",
-    "total_sessions": 8,
-    "total_duration_seconds": 4800,
-    "total_earnings": 113.60,
-    "avg_duration_seconds": 600,
-    "avg_comfort": 3.8,
-    "avg_earnings": 14.20,
-    "best_session_earnings": 28.40,
-    "daily_distribution": [
-      { "date": "2026-05-20", "sessions": 2, "earnings": 28.40, "duration": 1200, "avg_comfort": 4.0 }
-    ],
-    "hourly_distribution": [0,0,0,0,0,0,0,0,0,2,3,1,0,1,1,0,0,0,0,0,0,0,0,0],
-    "comfort_trend": [
-      { "date": "2026-05-20", "avg_comfort": 4.0 }
-    ]
-  }
-}
-```
+**返回：** `{ code: 0, data: StatsData }` （见 types.ts `StatsData` 接口）
 
-> **前端提示：**
-> - `daily_distribution` 用于日历热力图
-> - `hourly_distribution` 用于24小时分布柱状图（数组索引=小时）
-> - `comfort_trend` 用于舒适度趋势折线图
+> - `daily_distribution` → 日历热力图
+> - `hourly_distribution` → 24小时柱状图（使用 UTC+8 小时）
+> - `comfort_trend` → 舒适度折线图
 
-### 2.4 dailyStats - 获取月度日级数据（日历热力图专用）
+### 2.4 dailyStats - 月度日级数据（日历热力图专用）
 
 ```js
-{
-  action: 'dailyStats',
-  params: {
-    year: 2026,                      // int, 必填
-    month: 5,                        // int 1-12, 必填
-  }
-}
+{ action: 'dailyStats', params: { year: 2026, month: 5 } }
+// month: 1-12 整数
 ```
 
-**返回：**
-```json
-{
-  "code": 0,
-  "data": {
-    "year": 2026,
-    "month": 5,
-    "days": [
-      { "date": "2026-05-20", "count": 2, "earnings": 28.40, "duration": 1200 }
-    ]
-  }
-}
-```
-
-### 2.5 detail - 获取单条记录详情
+### 2.5 detail - 单条记录详情
 
 ```js
 { action: 'detail', params: { session_id: 'xxx' } }
@@ -254,7 +178,7 @@ uniCloud.callFunction({
 
 ### 3.1 check - 检查并颁发新成就
 
-> 应在每次 `session-manager.create` 成功后调用
+> 每次 `session-manager.create` 成功后调用
 
 ```js
 {
@@ -270,23 +194,9 @@ uniCloud.callFunction({
 }
 ```
 
-**返回：**
-```json
-{
-  "code": 0,
-  "data": {
-    "newly_earned": [
-      { "key": "first_poop", "name": "初来乍到", "description": "完成第一次如厕记录", "rarity": "common", "xp_reward": 20 }
-    ],
-    "bonus_xp": 20,
-    "total_xp": 148,
-    "current_title": "如厕专员",
-    "current_level": 2
-  }
-}
-```
+**返回：** `{ code: 0, data: { newly_earned: Badge[], bonus_xp, total_xp, current_title, current_level } }`
 
-> **前端提示：** `newly_earned` 非空时弹出徽章获得动画
+> `newly_earned` 非空时弹出徽章获得 Lottie 动画。徽章 XP 使用 `dbCmd.inc()` 原子更新。
 
 ### 3.2 getBadges - 获取用户徽章列表
 
@@ -296,6 +206,14 @@ uniCloud.callFunction({
 
 **返回：** `{ code: 0, data: { earned: Badge[], locked: Badge[] } }`
 
+### 3.3 seedBadges - 初始化徽章数据（部署时调用一次）
+
+```js
+{ action: 'seedBadges', params: {} }
+```
+
+> 幂等操作：如果 badges 集合已有数据则跳过。部署后端后需调用一次。
+
 ---
 
 ## 四、report-generator 报告系统
@@ -303,32 +221,8 @@ uniCloud.callFunction({
 ### 4.1 getWeeklyReport - 获取周报
 
 ```js
-{
-  action: 'getWeeklyReport',
-  params: {
-    week_start: 1716076800000,       // timestamp, 可选, 不传则返回最近10条
-  }
-}
-```
-
-**返回：**
-```json
-{
-  "code": 0,
-  "data": {
-    "reports": [{
-      "week_start": 1716076800000,
-      "total_sessions": 8,
-      "total_duration_seconds": 4800,
-      "total_earnings": 113.60,
-      "avg_comfort": 3.8,
-      "best_session_earnings": 28.40,
-      "purchasing_comparisons": [
-        { "item_name": "瑞幸咖啡", "item_price": 9.9, "quantity_affordable": 11.4, "icon": "coffee" }
-      ]
-    }]
-  }
-}
+{ action: 'getWeeklyReport', params: { week_start: 1716076800000 } }
+// week_start 可选，不传返回最近10条
 ```
 
 ### 4.2 getAnnualReport - 获取年度报告
@@ -337,43 +231,11 @@ uniCloud.callFunction({
 { action: 'getAnnualReport', params: { year: 2026 } }
 ```
 
-**返回：**
-```json
-{
-  "code": 0,
-  "data": {
-    "report": {
-      "year": 2026,
-      "total_sessions": 240,
-      "total_duration_seconds": 144000,
-      "total_earnings": 3408.00,
-      "avg_comfort": 3.6,
-      "avg_daily_sessions": 1.2,
-      "best_session_earnings": 56.80,
-      "peak_hour": 10,
-      "active_days": 200,
-      "monthly_stats": [
-        { "month": 1, "sessions": 20, "earnings": 284.00, "duration": 12000 }
-      ],
-      "salary_changes": [],
-      "purchasing_comparisons": [
-        { "item_name": "外卖一顿饭", "item_price": 25, "quantity_affordable": 136.3, "icon": "takeout" }
-      ],
-      "hourly_distribution": [0,0,0,...,0]
-    }
-  }
-}
-```
+**返回：** `{ code: 0, data: { report: AnnualReport } }` （见 types.ts `AnnualReport` 接口）
 
-> **前端提示：**
-> - `monthly_stats` 用于年度月份柱状图
-> - `hourly_distribution` 用于24h分布图
-> - `salary_changes` 用于薪资 vs 拉屎收入对比图
-> - 年度报告适合用Canvas渲染为可分享的精美卡片
+### 4.3 generateWeeklyAll - 批量生成周报（定时任务，前端不调用）
 
-### 4.3 generateWeeklyAll - 批量生成周报（定时任务调用）
-
-> 此接口由 uniCloud 定时触发器调用（每周一早8点），不需要前端调用
+由 `push-scheduler` 云函数定时触发，使用 UTC+8 计算周一边界。
 
 ---
 
@@ -385,7 +247,7 @@ uniCloud.callFunction({
 { action: 'create', params: { name: '拉屎天团' } }
 ```
 
-**返回：** `{ code: 0, data: { group: { _id, name, invite_code, ... } } }`
+> 邀请码自动生成，带碰撞检测（最多重试5次）。
 
 ### 5.2 join - 加入战队
 
@@ -418,26 +280,9 @@ uniCloud.callFunction({
 }
 ```
 
-**返回：**
-```json
-{
-  "code": 0,
-  "data": {
-    "rankings": [
-      {
-        "rank": 1,
-        "nickname": "拉屎小王子",
-        "current_title": "马桶总监",
-        "total_earnings": 284.00,
-        "total_duration": 12000,
-        "total_sessions": 20
-      }
-    ],
-    "group_name": "拉屎天团",
-    "period": "week"
-  }
-}
-```
+**返回：** `{ code: 0, data: { rankings: LeaderboardEntry[], group_name, period } }`
+
+> 排行榜使用批量查询（2次DB调用），不再有 N+1 问题。
 
 ### 5.6 feed - 获取团队动态
 
@@ -445,7 +290,7 @@ uniCloud.callFunction({
 { action: 'feed', params: { group_id: 'xxx', limit: 20 } }
 ```
 
-**返回：** 匿名/非匿名模式下的最近如厕动态列表
+> 非匿名模式正确显示用户昵称（批量查询用户信息）。
 
 ---
 
@@ -455,34 +300,24 @@ uniCloud.callFunction({
 |------|------|
 | 0 | 成功 |
 | 400 | 参数错误 |
-| 401 | 未登录 |
-| 403 | 无权限 |
+| 401 | 未登录或token过期 |
+| 403 | 无权限（查看他人记录/非团队成员等） |
 | 404 | 资源不存在 |
+| 500 | 服务器内部错误 |
 
 ---
 
-## 七、数据类型参考
+## 七、数据安全说明
 
-完整 TypeScript 类型定义见 `src/utils/types.ts`
+- **所有数据库集合的 create/update/delete 权限均设为 false**，只允许通过云函数操作
+- 用户只能读取自己的数据（`doc._id == auth.uid` 或 `doc.user_id == auth.uid`）
+- 所有计数器（XP、收入、次数、时长）使用 `dbCmd.inc()` 原子更新
+- 所有数组追加（徽章、薪资历史、团队成员）使用 `dbCmd.push()` 原子更新
+- 时间计算统一使用 UTC+8（北京时间），通过 `common/utils.js` 中的工具函数
 
-### 薪资计算公式
+## 八、类型参考
 
-```
-时薪 = 月薪 / 月工作天数 / 日工作小时数
-秒薪 = 时薪 / 3600
-本次收入 = 秒薪 × 如厕秒数（保留2位小数）
-```
-
-前端实时计时器使用 `src/utils/salary-calculator.ts` 中的 `calculatePerSecondRate()` 每秒更新显示。
-
-### 反馈规则
-- 时长 >= 10分钟 → `praise`（夸奖动画）
-- 时长 5-10分钟 → `normal`（普通动画）
-- 时长 < 5分钟 → `encourage`（鼓励动画）
-
-### 经验值规则
-- 基础：10 XP
-- 时长加成：+1 XP/分钟
-- 舒适度加成：舒适度 × 2 XP
-- 连续打卡：+5 XP
-- 徽章奖励：各不相同（一次性）
+完整 TypeScript 类型定义见 `src/utils/types.ts`，包含：
+- `User`, `PoopSession`, `Badge`, `Group`, `WeeklyReport`
+- `SessionCreateResult`, `AnnualReport`, `StatsData`
+- `LeaderboardEntry`, `TitleDef`, `PurchaseComparison`

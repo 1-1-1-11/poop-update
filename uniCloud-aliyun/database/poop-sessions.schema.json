@@ -2,8 +2,8 @@
   "bpiVersion": 2,
   "permission": {
     "read": "doc.user_id == auth.uid",
-    "create": true,
-    "update": "doc.user_id == auth.uid",
+    "create": false,
+    "update": false,
     "delete": false
   },
   "required": ["user_id", "start_time", "end_time", "duration_seconds", "earnings", "comfort_level"],
