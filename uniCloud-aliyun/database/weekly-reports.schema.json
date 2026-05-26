@@ -1,0 +1,83 @@
+{
+  "bpiVersion": 2,
+  "permission": {
+    "read": "doc.user_id == auth.uid",
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "required": ["user_id", "week_start", "week_end"],
+  "properties": {
+    "_id": { "description": "周报ID" },
+    "user_id": {
+      "bsonType": "string",
+      "title": "用户ID",
+      "foreignKey": "users._id"
+    },
+    "week_start": {
+      "bsonType": "timestamp",
+      "title": "周一时间戳"
+    },
+    "week_end": {
+      "bsonType": "timestamp",
+      "title": "周日时间戳"
+    },
+    "total_sessions": {
+      "bsonType": "int",
+      "title": "总次数",
+      "defaultValue": 0
+    },
+    "total_duration_seconds": {
+      "bsonType": "int",
+      "title": "总时长(秒)",
+      "defaultValue": 0
+    },
+    "total_earnings": {
+      "bsonType": "double",
+      "title": "总收入(元)",
+      "defaultValue": 0
+    },
+    "avg_comfort": {
+      "bsonType": "double",
+      "title": "平均舒适度",
+      "defaultValue": 0
+    },
+    "best_session_earnings": {
+      "bsonType": "double",
+      "title": "单次最高收入(元)",
+      "defaultValue": 0
+    },
+    "purchasing_comparisons": {
+      "bsonType": "array",
+      "title": "购买力对比",
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "item_name": { "bsonType": "string" },
+          "item_price": { "bsonType": "double" },
+          "quantity_affordable": { "bsonType": "double" },
+          "icon": { "bsonType": "string" }
+        }
+      },
+      "defaultValue": []
+    },
+    "rank_in_groups": {
+      "bsonType": "array",
+      "title": "团队排名",
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "group_id": { "bsonType": "string" },
+          "group_name": { "bsonType": "string" },
+          "rank": { "bsonType": "int" },
+          "total_members": { "bsonType": "int" }
+        }
+      },
+      "defaultValue": []
+    },
+    "generated_at": {
+      "bsonType": "timestamp",
+      "title": "生成时间"
+    }
+  }
+}

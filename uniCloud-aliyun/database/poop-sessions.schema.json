@@ -1,0 +1,71 @@
+{
+  "bpiVersion": 2,
+  "permission": {
+    "read": "doc.user_id == auth.uid",
+    "create": true,
+    "update": "doc.user_id == auth.uid",
+    "delete": false
+  },
+  "required": ["user_id", "start_time", "end_time", "duration_seconds", "earnings", "comfort_level"],
+  "properties": {
+    "_id": { "description": "记录ID" },
+    "user_id": {
+      "bsonType": "string",
+      "title": "用户ID",
+      "foreignKey": "users._id"
+    },
+    "start_time": {
+      "bsonType": "timestamp",
+      "title": "开始时间"
+    },
+    "end_time": {
+      "bsonType": "timestamp",
+      "title": "结束时间"
+    },
+    "duration_seconds": {
+      "bsonType": "int",
+      "title": "时长(秒)",
+      "minimum": 1
+    },
+    "earnings": {
+      "bsonType": "double",
+      "title": "本次收入(元)",
+      "minimum": 0
+    },
+    "salary_at_time": {
+      "bsonType": "int",
+      "title": "记录时月薪(元)"
+    },
+    "comfort_level": {
+      "bsonType": "int",
+      "title": "舒适度(1-5)",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "feedback_type": {
+      "bsonType": "string",
+      "title": "反馈类型",
+      "enum": ["praise", "encourage", "normal"]
+    },
+    "xp_earned": {
+      "bsonType": "int",
+      "title": "获得经验值",
+      "minimum": 0,
+      "defaultValue": 0
+    },
+    "note": {
+      "bsonType": "string",
+      "title": "备注",
+      "maxLength": 200
+    },
+    "is_work_hours": {
+      "bsonType": "bool",
+      "title": "是否工作时间",
+      "defaultValue": true
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "创建时间"
+    }
+  }
+}

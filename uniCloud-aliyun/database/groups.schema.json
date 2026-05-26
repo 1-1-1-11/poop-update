@@ -1,0 +1,52 @@
+{
+  "bpiVersion": 2,
+  "permission": {
+    "read": "auth.uid in doc.member_ids",
+    "create": true,
+    "update": "doc.creator_id == auth.uid",
+    "delete": "doc.creator_id == auth.uid"
+  },
+  "required": ["name", "creator_id", "invite_code"],
+  "properties": {
+    "_id": { "description": "团队ID" },
+    "name": {
+      "bsonType": "string",
+      "title": "团队名称",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "creator_id": {
+      "bsonType": "string",
+      "title": "创建者ID",
+      "foreignKey": "users._id"
+    },
+    "invite_code": {
+      "bsonType": "string",
+      "title": "邀请码",
+      "minLength": 6,
+      "maxLength": 6
+    },
+    "member_ids": {
+      "bsonType": "array",
+      "title": "成员ID列表",
+      "items": { "bsonType": "string" },
+      "defaultValue": []
+    },
+    "max_members": {
+      "bsonType": "int",
+      "title": "最大成员数",
+      "minimum": 2,
+      "maximum": 50,
+      "defaultValue": 50
+    },
+    "is_anonymous": {
+      "bsonType": "bool",
+      "title": "是否匿名",
+      "defaultValue": false
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "创建时间"
+    }
+  }
+}

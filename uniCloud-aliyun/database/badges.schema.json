@@ -1,0 +1,52 @@
+{
+  "bpiVersion": 2,
+  "permission": {
+    "read": true,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "required": ["key", "name", "category", "condition", "rarity"],
+  "properties": {
+    "_id": { "description": "徽章ID" },
+    "key": {
+      "bsonType": "string",
+      "title": "唯一标识"
+    },
+    "name": {
+      "bsonType": "string",
+      "title": "显示名称"
+    },
+    "description": {
+      "bsonType": "string",
+      "title": "描述"
+    },
+    "icon": {
+      "bsonType": "string",
+      "title": "图标标识"
+    },
+    "category": {
+      "bsonType": "string",
+      "title": "类别",
+      "enum": ["frequency", "duration", "streak", "earnings", "social", "special"]
+    },
+    "condition": {
+      "bsonType": "object",
+      "title": "达成条件",
+      "properties": {
+        "type": { "bsonType": "string" },
+        "threshold": { "bsonType": "int" }
+      }
+    },
+    "xp_reward": {
+      "bsonType": "int",
+      "title": "经验奖励",
+      "minimum": 0
+    },
+    "rarity": {
+      "bsonType": "string",
+      "title": "稀有度",
+      "enum": ["common", "rare", "epic", "legendary"]
+    }
+  }
+}

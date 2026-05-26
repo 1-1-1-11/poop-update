@@ -1,0 +1,144 @@
+{
+  "bpiVersion": 2,
+  "permission": {
+    "read": true,
+    "create": true,
+    "update": "doc._id == auth.uid",
+    "delete": false
+  },
+  "required": ["nickname", "monthly_salary"],
+  "properties": {
+    "_id": { "description": "用户ID" },
+    "nickname": {
+      "bsonType": "string",
+      "title": "昵称",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "avatar_url": {
+      "bsonType": "string",
+      "title": "头像URL",
+      "defaultValue": ""
+    },
+    "wechat_openid": {
+      "bsonType": "string",
+      "title": "微信OpenID"
+    },
+    "monthly_salary": {
+      "bsonType": "int",
+      "title": "月薪(元)",
+      "minimum": 0,
+      "maximum": 10000000
+    },
+    "work_days_per_month": {
+      "bsonType": "int",
+      "title": "月工作天数",
+      "minimum": 1,
+      "maximum": 31,
+      "defaultValue": 22
+    },
+    "work_hours_per_day": {
+      "bsonType": "int",
+      "title": "日工作小时数",
+      "minimum": 1,
+      "maximum": 24,
+      "defaultValue": 8
+    },
+    "salary_history": {
+      "bsonType": "array",
+      "title": "薪资变更历史",
+      "items": {
+        "bsonType": "object",
+        "required": ["monthly_salary", "effective_date"],
+        "properties": {
+          "monthly_salary": { "bsonType": "int" },
+          "effective_date": { "bsonType": "timestamp" },
+          "note": { "bsonType": "string" }
+        }
+      },
+      "defaultValue": []
+    },
+    "current_title": {
+      "bsonType": "string",
+      "title": "当前头衔",
+      "defaultValue": "厕所实习生"
+    },
+    "current_level": {
+      "bsonType": "int",
+      "title": "当前等级",
+      "minimum": 1,
+      "maximum": 7,
+      "defaultValue": 1
+    },
+    "total_xp": {
+      "bsonType": "int",
+      "title": "累计经验值",
+      "minimum": 0,
+      "defaultValue": 0
+    },
+    "total_poop_earnings": {
+      "bsonType": "double",
+      "title": "累计拉屎收入(元)",
+      "minimum": 0,
+      "defaultValue": 0
+    },
+    "total_sessions": {
+      "bsonType": "int",
+      "title": "累计如厕次数",
+      "minimum": 0,
+      "defaultValue": 0
+    },
+    "total_duration_seconds": {
+      "bsonType": "int",
+      "title": "累计如厕时长(秒)",
+      "minimum": 0,
+      "defaultValue": 0
+    },
+    "streak_days": {
+      "bsonType": "int",
+      "title": "连续打卡天数",
+      "minimum": 0,
+      "defaultValue": 0
+    },
+    "badges": {
+      "bsonType": "array",
+      "title": "已获徽章ID列表",
+      "items": { "bsonType": "string" },
+      "defaultValue": []
+    },
+    "group_ids": {
+      "bsonType": "array",
+      "title": "已加入团队ID",
+      "items": { "bsonType": "string" },
+      "defaultValue": []
+    },
+    "settings": {
+      "bsonType": "object",
+      "title": "用户设置",
+      "defaultValue": {
+        "long_sit_alert": true,
+        "long_sit_minutes": 20,
+        "hydration_reminder": false,
+        "weekly_report_push": true,
+        "sound_enabled": true,
+        "bgm_enabled": false
+      },
+      "properties": {
+        "long_sit_alert": { "bsonType": "bool" },
+        "long_sit_minutes": { "bsonType": "int" },
+        "hydration_reminder": { "bsonType": "bool" },
+        "weekly_report_push": { "bsonType": "bool" },
+        "sound_enabled": { "bsonType": "bool" },
+        "bgm_enabled": { "bsonType": "bool" }
+      }
+    },
+    "created_at": {
+      "bsonType": "timestamp",
+      "title": "创建时间"
+    },
+    "updated_at": {
+      "bsonType": "timestamp",
+      "title": "更新时间"
+    }
+  }
+}
