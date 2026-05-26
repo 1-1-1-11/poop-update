@@ -85,39 +85,10 @@
       <text class="chart-desc">反映您在哪个工作时间段拉屎最频繁。</text>
     </view>
 
-    <!-- 舒适度趋势折线图 (SVG 绘制) -->
-    <view class="chart-card" v-if="comfortTrendPoints.length > 0">
+    <!-- 舒适度趋势折线图 (Canvas 渲染, 兼容小程序) -->
+    <view class="chart-card" v-if="statsData?.comfort_trend?.length">
       <view class="chart-header">肠胃状态趋势 (舒适度)</view>
-      <view class="svg-container">
-        <svg class="trend-svg" viewBox="0 0 320 120">
-          <!-- 虚线背景 -->
-          <line x1="0" y1="20" x2="320" y2="20" stroke="#f0f0f0" stroke-dasharray="3,3" />
-          <line x1="0" y1="60" x2="320" y2="60" stroke="#f0f0f0" stroke-dasharray="3,3" />
-          <line x1="0" y1="100" x2="320" y2="100" stroke="#f0f0f0" stroke-dasharray="3,3" />
-          
-          <!-- 折线 -->
-          <polyline 
-            :points="comfortPolylinePoints" 
-            fill="none" 
-            stroke="#FF8C42" 
-            stroke-width="3" 
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          
-          <!-- 数据点 -->
-          <circle 
-            v-for="(pt, idx) in comfortTrendPoints" 
-            :key="idx" 
-            :cx="pt.x" 
-            :cy="pt.y" 
-            r="4" 
-            fill="#ffffff" 
-            stroke="#FF8C42" 
-            stroke-width="2" 
-          />
-        </svg>
-      </view>
+      <canvas canvas-id="comfortChart" class="trend-canvas"></canvas>
       <view class="trend-labels">
         <text class="start-date">{{ comfortStartDate }}</text>
         <text class="trend-title-label">舒适度变化 (1-5星)</text>
@@ -157,9 +128,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { apiCall } from '../../services/api'
+import { formatHours, formatMinutes } from '../../utils/formatters'
 import type { StatsData } from '../../utils/types'
 
 const activePeriod = ref<'week' | 'month' | 'year' | 'all'>('week')
@@ -202,26 +174,68 @@ const getBarHeightPercent = (count: number): number => {
   return (count / max) * 100
 }
 
-// SVG 折线坐标计算
-const comfortTrendPoints = computed(() => {
-  if (!statsData.value || !statsData.value.comfort_trend || statsData.value.comfort_trend.length === 0) {
-    return []
-  }
-  const trend = statsData.value.comfort_trend
-  const totalPoints = trend.length
-  
-  return trend.map((t, idx) => {
-    // 均匀在 320 宽度内分布
-    const x = totalPoints > 1 ? idx * (300 / (totalPoints - 1)) + 10 : 160
-    // 5 星映射到 0 - 100 高度 (5星=20, 1星=100)
-    const y = 110 - (t.avg_comfort * 20)
+// Canvas 折线图绘制
+const drawComfortChart = () => {
+  const trend = statsData.value?.comfort_trend
+  if (!trend || trend.length === 0) return
+
+  const canvasWidth = 320
+  const canvasHeight = 120
+  const padding = { top: 10, bottom: 10, left: 10, right: 10 }
+  const chartW = canvasWidth - padding.left - padding.right
+  const chartH = canvasHeight - padding.top - padding.bottom
+
+  const ctx = uni.createCanvasContext('comfortChart')
+  if (!ctx) return
+
+  const points = trend.map((t, idx) => {
+    const x = trend.length > 1
+      ? padding.left + idx * (chartW / (trend.length - 1))
+      : canvasWidth / 2
+    const y = padding.top + chartH - ((t.avg_comfort - 1) / 4) * chartH
     return { x, y }
   })
-})
 
-const comfortPolylinePoints = computed(() => {
-  return comfortTrendPoints.value.map(pt => `${pt.x},${pt.y}`).join(' ')
-})
+  // 水平参考线
+  ctx.setStrokeStyle('#f0f0f0')
+  ctx.setLineWidth(1)
+  ctx.setLineDash([3, 3], 0)
+  for (let i = 1; i <= 3; i++) {
+    const y = padding.top + (chartH / 4) * i
+    ctx.beginPath()
+    ctx.moveTo(padding.left, y)
+    ctx.lineTo(canvasWidth - padding.right, y)
+    ctx.stroke()
+  }
+  ctx.setLineDash([], 0)
+
+  // 折线
+  if (points.length > 1) {
+    ctx.setStrokeStyle('#FF8C42')
+    ctx.setLineWidth(3)
+    ctx.setLineCap('round')
+    ctx.setLineJoin('round')
+    ctx.beginPath()
+    ctx.moveTo(points[0].x, points[0].y)
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y)
+    }
+    ctx.stroke()
+  }
+
+  // 数据点
+  points.forEach(pt => {
+    ctx.setFillStyle('#ffffff')
+    ctx.setStrokeStyle('#FF8C42')
+    ctx.setLineWidth(2)
+    ctx.beginPath()
+    ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
+  })
+
+  ctx.draw()
+}
 
 const comfortStartDate = computed(() => {
   const trend = statsData.value?.comfort_trend || []
@@ -291,16 +305,11 @@ const showDayStats = (day: any) => {
   }
 }
 
-const formatHours = (seconds: number): string => {
-  const hrs = seconds / 3600
-  if (hrs < 0.1) return `${Math.round(seconds / 60)}分钟`
-  return `${hrs.toFixed(1)}小时`
-}
+// 数据变化后绘制折线图
+watch(statsData, () => {
+  nextTick(() => drawComfortChart())
+})
 
-const formatMinutes = (seconds: number): string => {
-  const m = Math.round(seconds / 60)
-  return `${m}分钟`
-}
 </script>
 
 <style lang="scss" scoped>
@@ -469,16 +478,11 @@ const formatMinutes = (seconds: number): string => {
   }
 }
 
-// SVG 折线图
-.svg-container {
+// Canvas 折线图
+.trend-canvas {
   width: 100%;
   height: 150rpx;
   margin-top: 10rpx;
-
-  .trend-svg {
-    width: 100%;
-    height: 100%;
-  }
 }
 
 .trend-labels {

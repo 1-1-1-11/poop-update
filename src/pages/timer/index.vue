@@ -67,6 +67,20 @@ const userStore = useUserStore()
 const poopStore = usePoopStore()
 
 const bgmOn = ref(false)
+const audioContext = ref<any>(null)
+
+// 初始化白噪音音频 (使用 uni-app 内置音频 API)
+const initAudio = () => {
+  if (audioContext.value) return
+  try {
+    audioContext.value = uni.createInnerAudioContext()
+    audioContext.value.src = '/static/audio/white-noise.mp3'
+    audioContext.value.loop = true
+    audioContext.value.autoplay = false
+  } catch (e) {
+    console.warn('音频初始化失败:', e)
+  }
+}
 
 // 基础薪资率
 const hourlyRate = computed(() => {
@@ -130,11 +144,30 @@ const formatTime = (totalSeconds: number): string => {
 const toggleBgm = () => {
   bgmOn.value = !bgmOn.value
   if (bgmOn.value) {
+    initAudio()
+    if (audioContext.value) {
+      try {
+        if (typeof audioContext.value.play === 'function') {
+          audioContext.value.play()
+        }
+      } catch (e) {
+        console.warn('音频播放失败:', e)
+      }
+    }
     uni.showToast({
-      title: '为您播放：潺潺流水白噪音 🌊',
+      title: '播放白噪音 潺潺流水声 🌊',
       icon: 'none'
     })
   } else {
+    if (audioContext.value) {
+      try {
+        if (typeof audioContext.value.stop === 'function') {
+          audioContext.value.stop()
+        }
+      } catch (e) {
+        console.warn('音频停止失败:', e)
+      }
+    }
     uni.showToast({
       title: '摸鱼电台已静音',
       icon: 'none'

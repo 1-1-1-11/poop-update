@@ -80,7 +80,8 @@
 
       <!-- 加载更多提示 -->
       <view class="load-more">
-        <text class="load-text">{{ hasMore ? '上拉加载更多...' : '— 已经拉到底了 —' }}</text>
+        <text class="load-text" v-if="loadingMore">加载中...</text>
+        <text class="load-text" v-else>{{ hasMore ? '上拉加载更多...' : '— 已经拉到底了 —' }}</text>
       </view>
     </view>
 
@@ -98,6 +99,7 @@ import { ref } from 'vue'
 import { onShow, onReachBottom } from '@dcloudio/uni-app'
 import { apiCall } from '../../services/api'
 import { useUserStore } from '../../stores/user'
+import { formatHours, formatDurationSec, formatDateTime } from '../../utils/formatters'
 import type { PoopSession, StatsData } from '../../utils/types'
 
 const userStore = useUserStore()
@@ -106,6 +108,7 @@ const sessions = ref<PoopSession[]>([])
 const page = ref(1)
 const limit = 20
 const hasMore = ref(true)
+const loadingMore = ref(false)
 
 // 生涯累计
 const totalEarnings = ref(0)
@@ -163,10 +166,12 @@ const loadSessions = async (isNew = false) => {
 }
 
 // 触底加载下一页
-onReachBottom(() => {
-  if (hasMore.value) {
+onReachBottom(async () => {
+  if (hasMore.value && !loadingMore.value) {
+    loadingMore.value = true
     page.value += 1
-    loadSessions()
+    await loadSessions()
+    loadingMore.value = false
   }
 })
 
@@ -190,28 +195,6 @@ const handleResetFilter = async () => {
   searchStartDate.value = undefined
   searchEndDate.value = undefined
   await loadSessions(true)
-}
-
-const formatHours = (seconds: number): string => {
-  const hrs = (seconds / 3600).toFixed(1)
-  return `${hrs}小时`
-}
-
-const formatDurationSec = (seconds: number): string => {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  if (m === 0) return `${s}秒`
-  return `${m}分${s}秒`
-}
-
-const formatDateTime = (timestamp: number): string => {
-  const d = new Date(timestamp)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  const hr = String(d.getHours()).padStart(2, '0')
-  const min = String(d.getMinutes()).padStart(2, '0')
-  return `${y}-${m}-${day} ${hr}:${min}`
 }
 </script>
 

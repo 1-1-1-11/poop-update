@@ -96,6 +96,7 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { apiCall } from '../../services/api'
+import { formatMinutes } from '../../utils/formatters'
 import type { WeeklyReport } from '../../utils/types'
 
 const reports = ref<WeeklyReport[]>([])
@@ -166,11 +167,6 @@ const formatDateRange = (start: number, end: number): string => {
   const e = new Date(end)
   const pad = (num: number) => String(num).padStart(2, '0')
   return `${s.getFullYear()}.${pad(s.getMonth() + 1)}.${pad(s.getDate())} - ${e.getFullYear()}.${pad(e.getMonth() + 1)}.${pad(e.getDate())}`
-}
-
-const formatMinutes = (seconds: number): string => {
-  const m = Math.round(seconds / 60)
-  return `${m}分钟`
 }
 </script>
 

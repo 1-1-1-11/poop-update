@@ -1,17 +1,19 @@
-import type { 
-  User, 
-  PoopSession, 
-  Badge, 
-  Group, 
-  WeeklyReport, 
-  StatsData, 
+import type {
+  User,
+  PoopSession,
+  Badge,
+  Group,
+  WeeklyReport,
+  StatsData,
   AnnualReport,
   LeaderboardEntry,
-  SalaryRecord
+  SalaryRecord,
+  ComfortLevel
 } from '../utils/types'
 import { BADGE_DEFINITIONS } from '../utils/badge-definitions'
 import { getTitleByXP, calculateEarnings, getFeedbackType, calculateSessionXP } from '../utils/salary-calculator'
 import { getTopComparisons } from '../utils/purchase-items'
+import { getLocalDateString } from '../utils/formatters'
 
 // 统一的 API 调用返回值
 export interface ApiResponse<T = any> {
@@ -49,18 +51,6 @@ class MockDatabase {
       } catch (e) {}
     })
   }
-}
-
-// 帮助格式化北京时间 YYYY-MM-DD
-function getLocalDateString(timestamp: number): string {
-  const d = new Date(timestamp)
-  // 获取 UTC+8 时间
-  const utc = timestamp + d.getTimezoneOffset() * 60000
-  const nd = new Date(utc + 3600000 * 8)
-  const y = nd.getFullYear()
-  const m = String(nd.getMonth() + 1).padStart(2, '0')
-  const day = String(nd.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
 }
 
 function getWeekStartTimestamp(timestamp: number): number {
@@ -106,7 +96,7 @@ class MockServer {
           const durationSeconds = durationMinutes * 60
           const endTime = startTime + durationSeconds * 1000
           
-          const comfortLevel = (1 + Math.floor(Math.random() * 5)) as any
+          const comfortLevel = (1 + Math.floor(Math.random() * 5)) as ComfortLevel
           const earnings = calculateEarnings(baseSalary, durationSeconds, user.work_days_per_month, user.work_hours_per_day)
           const feedbackType = getFeedbackType(durationSeconds)
           const xpEarned = calculateSessionXP(durationSeconds, comfortLevel, mockSessions.length > 0)

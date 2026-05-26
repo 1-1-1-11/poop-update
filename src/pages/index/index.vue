@@ -100,7 +100,9 @@ import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '../../stores/user'
 import { usePoopStore } from '../../stores/poop'
-import { getNextTitle } from '../../utils/salary-calculator'
+import { getNextTitle, TITLE_LEVELS } from '../../utils/salary-calculator'
+import { formatDuration } from '../../utils/salary-calculator'
+import { getLocalDateString } from '../../utils/formatters'
 import { apiCall } from '../../services/api'
 import type { StatsData } from '../../utils/types'
 
@@ -161,16 +163,6 @@ const fetchTodayStats = async () => {
   }
 }
 
-// 格式化 YYYY-MM-DD
-function getLocalDateString(timestamp: number): string {
-  const d = new Date(timestamp)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-// 下个职级定义
 const nextTitle = computed(() => {
   if (!userStore.user) return null
   return getNextTitle(userStore.user.current_level)
@@ -179,19 +171,12 @@ const nextTitle = computed(() => {
 // XP 进度条百分比
 const xpPercent = computed(() => {
   if (!userStore.user || !nextTitle.value) return 100
-  // 获取当前职级最少XP
-  const currentTitleMin = userStore.user.total_xp - (userStore.user.total_xp % 100) // 粗略估算或直接范围
-  const range = nextTitle.value.minXP - currentTitleMin
-  const progressed = userStore.user.total_xp - currentTitleMin
-  const pct = Math.round((progressed / range) * 100)
-  return Math.min(Math.max(pct, 0), 100)
+  const currentLevelDef = TITLE_LEVELS.find(t => t.level === userStore.user!.current_level)
+  const min = currentLevelDef ? currentLevelDef.minXP : 0
+  const range = nextTitle.value.minXP - min
+  const progressed = userStore.user.total_xp - min
+  return Math.min(Math.max(Math.round((progressed / range) * 100), 0), 100)
 })
-
-const formatDuration = (seconds: number): string => {
-  const m = Math.floor(seconds / 60)
-  if (m === 0) return `${seconds}秒`
-  return `${m}分钟`
-}
 
 const navigateTo = (path: string) => {
   uni.navigateTo({ url: path })

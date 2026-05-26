@@ -15,8 +15,8 @@
           <input 
             class="input" 
             type="text" 
-            v-model="inviteCode" 
-            placeholder="请输入6位战队邀请码" 
+            v-model="inviteCodeInput"
+            placeholder="请输入6位战队邀请码"
             maxlength="10"
           />
           <button class="action-btn join-btn" :loading="loading" @tap="handleJoinGroup">加入</button>
@@ -129,6 +129,7 @@ import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '../../stores/user'
 import { apiCall } from '../../services/api'
+import { formatMinutes, formatTimeAgo } from '../../utils/formatters'
 import type { Group, LeaderboardEntry } from '../../utils/types'
 
 const userStore = useUserStore()
@@ -279,21 +280,6 @@ const copyInviteCode = () => {
       uni.showToast({ title: '邀请码已复制', icon: 'success' })
     }
   })
-}
-
-const formatMinutes = (seconds: number): string => {
-  const m = Math.round(seconds / 60)
-  return `${m}分钟`
-}
-
-const formatTimeAgo = (timestamp: number): string => {
-  const diff = Date.now() - timestamp
-  if (diff < 60000) return '刚刚'
-  const min = Math.floor(diff / 60000)
-  if (min < 60) return `${min}分钟前`
-  const hr = Math.floor(min / 60)
-  if (hr < 24) return `${hr}小时前`
-  return `${Math.floor(hr / 24)}天前`
 }
 </script>
 

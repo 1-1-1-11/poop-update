@@ -4,7 +4,7 @@
     <view class="almanac-card">
       <view class="calendar-header">
         <text class="date-gregorian">{{ currentDateStr }}</text>
-        <text class="lunar-lbl">丙午年 四月十一 (宜排泄)</text>
+        <text class="lunar-lbl">{{ lunarDateStr }}</text>
       </view>
 
       <view class="divider"></view>
@@ -70,6 +70,7 @@ import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 
 const currentDateStr = ref('')
+const lunarDateStr = ref('')
 const score = ref(90)
 const evaluation = ref('')
 const scoreColor = ref('#FF8C42')
@@ -93,6 +94,19 @@ const generateFortune = () => {
 
   // 基于日期的伪随机种子，保证同一天打开生成相同的运势
   const seed = (year * 367 + month * 31 + day) % 100
+
+  // 生成仿农历标注 (天干地支 + 月日)
+  const heavenlyStems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
+  const earthlyBranches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+  const lunarMonth = ((month + seed) % 12) + 1
+  const lunarDay = ((day + seed) % 30) + 1
+  const yearStem = heavenlyStems[(year - 4) % 10]
+  const yearBranch = earthlyBranches[(year - 4) % 12]
+  const yearZodiac = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'][(year - 4) % 12]
+  const monthStem = earthlyBranches[(lunarMonth - 1) % 12]
+  const dayStem = earthlyBranches[(lunarDay - 1) % 12]
+  const yiSuffix = seed % 2 === 0 ? '(宜排泄)' : '(宜摸鱼)'
+  lunarDateStr.value = `${yearStem}${yearBranch}年 (${yearZodiac}年) ${monthStem}月${dayStem}日 ${yiSuffix}`
 
   // 1. 计算得分 (70 - 100)
   score.value = 70 + (seed % 31)
