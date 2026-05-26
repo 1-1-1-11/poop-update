@@ -1,0 +1,31 @@
+{
+  "bpiVersion": 2,
+  "permission": {
+    "read": true,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "required": ["name", "price", "icon"],
+  "properties": {
+    "_id": { "description": "商品ID" },
+    "name": {
+      "bsonType": "string",
+      "title": "商品名称"
+    },
+    "price": {
+      "bsonType": "double",
+      "title": "价格(元)",
+      "minimum": 0
+    },
+    "icon": {
+      "bsonType": "string",
+      "title": "图标标识"
+    },
+    "sort": {
+      "bsonType": "int",
+      "title": "排序权重",
+      "minimum": 0
+    }
+  }
+}

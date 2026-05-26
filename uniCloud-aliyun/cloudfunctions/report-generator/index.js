@@ -5,26 +5,9 @@ const dbCmd = db.command
 const usersCollection = db.collection('users')
 const sessionsCollection = db.collection('poop-sessions')
 const reportsCollection = db.collection('weekly-reports')
+const groupsCollection = db.collection('groups')
 const { getAuthUid, getWeekMondayCN, getDateStringCN, getHourCN } = require('../../common/utils')
-
-const PURCHASE_ITEMS = [
-  { name: '瑞幸咖啡', price: 9.9, icon: 'coffee' },
-  { name: '蜜雪冰城', price: 4, icon: 'ice-cream' },
-  { name: '奶茶', price: 15, icon: 'bubble-tea' },
-  { name: '煎饼果子', price: 8, icon: 'pancake' },
-  { name: '包子', price: 2, icon: 'bao' },
-  { name: '地铁票', price: 3, icon: 'metro' },
-  { name: '可乐', price: 3.5, icon: 'cola' },
-  { name: '矿泉水', price: 2, icon: 'water' },
-  { name: '方便面', price: 5, icon: 'noodle' },
-  { name: '视频会员日卡', price: 6, icon: 'vip' },
-  { name: '麦当劳巨无霸', price: 25, icon: 'burger' },
-  { name: '电影票', price: 35, icon: 'movie' },
-  { name: '外卖一顿饭', price: 25, icon: 'takeout' },
-  { name: 'AJ球鞋', price: 1299, icon: 'sneaker' },
-  { name: 'Switch游戏', price: 299, icon: 'game' },
-  { name: 'iPhone', price: 7999, icon: 'phone' },
-]
+const { PURCHASE_ITEMS } = require('../../common/badge-definitions')
 
 exports.main = async (event, context) => {
   const { action, params } = event
@@ -43,15 +26,9 @@ exports.main = async (event, context) => {
   }
 }
 
-async function generateWeeklyForUser(params, context, callerUid) {
-  const uid = callerUid || null
-
-  if (!uid) {
-    const auth = await getAuthUid(context)
-    if (!auth.uid) return { code: 401, msg: auth.errMsg }
-    return await _generateReport(auth.uid, params.week_start)
-  }
-
+async function generateWeeklyForUser(params, context) {
+  const { uid, errMsg } = await getAuthUid(context)
+  if (!uid) return { code: 401, msg: errMsg }
   return await _generateReport(uid, params.week_start)
 }
 
@@ -90,6 +67,8 @@ async function _generateReport(uid, weekStart) {
     .sort((a, b) => b.quantity_affordable - a.quantity_affordable)
     .slice(0, 4)
 
+  const rankInGroups = await _calcGroupRanks(uid, weekStart, weekEnd)
+
   const report = {
     user_id: uid,
     week_start: weekStart,
@@ -100,7 +79,7 @@ async function _generateReport(uid, weekStart) {
     avg_comfort: Math.round((totalComfort / sessions.length) * 10) / 10,
     best_session_earnings: Math.round(bestEarnings * 100) / 100,
     purchasing_comparisons: comparisons,
-    rank_in_groups: [],
+    rank_in_groups: rankInGroups,
     generated_at: Date.now(),
   }
 
@@ -108,6 +87,40 @@ async function _generateReport(uid, weekStart) {
   report._id = result.id
 
   return { code: 0, data: { report } }
+}
+
+async function _calcGroupRanks(uid, weekStart, weekEnd) {
+  const userRes = await usersCollection.doc(uid).field({ group_ids: true }).get()
+  const groupIds = userRes.data?.[0]?.group_ids || []
+  if (groupIds.length === 0) return []
+
+  const groupsRes = await groupsCollection.where({ _id: dbCmd.in(groupIds) }).field({ _id: true, name: true, member_ids: true }).get()
+  const ranks = []
+
+  for (const group of groupsRes.data) {
+    const allSessions = await sessionsCollection
+      .where({ user_id: dbCmd.in(group.member_ids), start_time: dbCmd.gte(weekStart).and(dbCmd.lte(weekEnd)) })
+      .get()
+
+    const earningsMap = {}
+    group.member_ids.forEach(mid => { earningsMap[mid] = 0 })
+    allSessions.data.forEach(s => {
+      if (earningsMap[s.user_id] !== undefined) earningsMap[s.user_id] += s.earnings
+    })
+
+    const sorted = Object.entries(earningsMap).sort((a, b) => b[1] - a[1])
+    const myIndex = sorted.findIndex(([mid]) => mid === uid)
+
+    ranks.push({
+      group_id: group._id,
+      group_name: group.name,
+      rank: myIndex + 1,
+      total_members: group.member_ids.length,
+      my_earnings: Math.round((earningsMap[uid] || 0) * 100) / 100,
+    })
+  }
+
+  return ranks
 }
 
 async function generateWeeklyAll() {
@@ -173,21 +186,24 @@ async function getAnnualReport(params, context) {
   const activeDays = new Set()
 
   sessions.forEach(s => {
-    const d = new Date(s.start_time)
-    const month = d.getMonth() + 1
+    const dateStr = getDateStringCN(s.start_time)
+    const month = parseInt(dateStr.split('-')[1], 10)
     if (!monthlyStats[month]) monthlyStats[month] = { month, sessions: 0, earnings: 0, duration: 0 }
     monthlyStats[month].sessions++
     monthlyStats[month].earnings += s.earnings
     monthlyStats[month].duration += s.duration_seconds
     hourlyDist[getHourCN(s.start_time)]++
-    activeDays.add(getDateStringCN(s.start_time))
+    activeDays.add(dateStr)
   })
 
   const peakHour = hourlyDist.indexOf(Math.max(...hourlyDist))
 
   const userRes = await usersCollection.doc(uid).field({ salary_history: true }).get()
   const salaryHistory = (userRes.data?.[0]?.salary_history || [])
-    .filter(s => new Date(s.effective_date).getFullYear() === year)
+    .filter(s => {
+      const d = getDateStringCN(s.effective_date)
+      return d.startsWith(String(year))
+    })
 
   const comparisons = PURCHASE_ITEMS
     .map(item => ({ item_name: item.name, item_price: item.price, quantity_affordable: Math.floor((totalEarnings / item.price) * 10) / 10, icon: item.icon }))

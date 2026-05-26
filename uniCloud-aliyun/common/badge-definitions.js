@@ -1,0 +1,50 @@
+'use strict'
+
+const BADGE_DEFINITIONS = [
+  { key: 'first_poop', name: '初来乍到', description: '完成第一次如厕记录', icon: 'badge-first-poop', category: 'special', condition: { type: 'total_sessions', threshold: 1 }, xp_reward: 20, rarity: 'common' },
+  { key: 'daily_triple', name: '日进斗金', description: '一天内拉屎3次以上', icon: 'badge-daily-triple', category: 'frequency', condition: { type: 'sessions_in_day', threshold: 3 }, xp_reward: 50, rarity: 'common' },
+  { key: 'daily_five', name: '高产似母猪', description: '一天内拉屎5次以上', icon: 'badge-daily-five', category: 'frequency', condition: { type: 'sessions_in_day', threshold: 5 }, xp_reward: 100, rarity: 'rare' },
+  { key: 'total_100', name: '百屎之王', description: '累计如厕100次', icon: 'badge-total-100', category: 'frequency', condition: { type: 'total_sessions', threshold: 100 }, xp_reward: 200, rarity: 'rare' },
+  { key: 'total_500', name: '千古一拉', description: '累计如厕500次', icon: 'badge-total-500', category: 'frequency', condition: { type: 'total_sessions', threshold: 500 }, xp_reward: 500, rarity: 'epic' },
+  { key: 'total_1000', name: '拉屎传说', description: '累计如厕1000次', icon: 'badge-total-1000', category: 'frequency', condition: { type: 'total_sessions', threshold: 1000 }, xp_reward: 1000, rarity: 'legendary' },
+  { key: 'flash', name: '闪电侠', description: '单次如厕不到2分钟', icon: 'badge-flash', category: 'duration', condition: { type: 'session_under_seconds', threshold: 120 }, xp_reward: 30, rarity: 'common' },
+  { key: 'iron_butt', name: '铁屁股', description: '单次如厕超过30分钟', icon: 'badge-iron-butt', category: 'duration', condition: { type: 'session_over_seconds', threshold: 1800 }, xp_reward: 100, rarity: 'rare' },
+  { key: 'marathon', name: '马拉松选手', description: '单次如厕超过60分钟', icon: 'badge-marathon', category: 'duration', condition: { type: 'session_over_seconds', threshold: 3600 }, xp_reward: 300, rarity: 'epic' },
+  { key: 'total_hours_10', name: '十小时俱乐部', description: '累计如厕超过10小时', icon: 'badge-hours-10', category: 'duration', condition: { type: 'total_duration_seconds', threshold: 36000 }, xp_reward: 200, rarity: 'rare' },
+  { key: 'total_hours_100', name: '百小时巨擘', description: '累计如厕超过100小时', icon: 'badge-hours-100', category: 'duration', condition: { type: 'total_duration_seconds', threshold: 360000 }, xp_reward: 1000, rarity: 'legendary' },
+  { key: 'streak_7', name: '一周不断', description: '连续打卡7天', icon: 'badge-streak-7', category: 'streak', condition: { type: 'streak_days', threshold: 7 }, xp_reward: 50, rarity: 'common' },
+  { key: 'streak_30', name: '风雨无阻', description: '连续打卡30天', icon: 'badge-streak-30', category: 'streak', condition: { type: 'streak_days', threshold: 30 }, xp_reward: 200, rarity: 'rare' },
+  { key: 'streak_100', name: '铁打的屁股', description: '连续打卡100天', icon: 'badge-streak-100', category: 'streak', condition: { type: 'streak_days', threshold: 100 }, xp_reward: 500, rarity: 'epic' },
+  { key: 'streak_365', name: '全勤之神', description: '连续打卡365天', icon: 'badge-streak-365', category: 'streak', condition: { type: 'streak_days', threshold: 365 }, xp_reward: 2000, rarity: 'legendary' },
+  { key: 'earn_100', name: '小有所得', description: '累计拉屎收入¥100', icon: 'badge-earn-100', category: 'earnings', condition: { type: 'total_earnings', threshold: 100 }, xp_reward: 100, rarity: 'common' },
+  { key: 'earn_1000', name: '千元大户', description: '累计拉屎收入¥1,000', icon: 'badge-earn-1000', category: 'earnings', condition: { type: 'total_earnings', threshold: 1000 }, xp_reward: 300, rarity: 'rare' },
+  { key: 'earn_10000', name: '月入过万', description: '累计拉屎收入¥10,000', icon: 'badge-earn-10000', category: 'earnings', condition: { type: 'total_earnings', threshold: 10000 }, xp_reward: 1000, rarity: 'epic' },
+  { key: 'single_earn_50', name: '一泡值千金', description: '单次收入超过¥50', icon: 'badge-single-50', category: 'earnings', condition: { type: 'single_earnings', threshold: 50 }, xp_reward: 200, rarity: 'rare' },
+  { key: 'first_group', name: '入队新兵', description: '加入第一个战队', icon: 'badge-first-group', category: 'social', condition: { type: 'groups_joined', threshold: 1 }, xp_reward: 30, rarity: 'common' },
+  { key: 'group_leader', name: '建队先锋', description: '创建一个战队', icon: 'badge-group-leader', category: 'social', condition: { type: 'groups_created', threshold: 1 }, xp_reward: 50, rarity: 'common' },
+  { key: 'weekly_king', name: '本周拉屎王', description: '团队周排行第一', icon: 'badge-weekly-king', category: 'social', condition: { type: 'weekly_rank_first', threshold: 1 }, xp_reward: 100, rarity: 'rare' },
+  { key: 'comfort_five', name: '舒适之王', description: '获得一次5星舒适度', icon: 'badge-comfort-five', category: 'special', condition: { type: 'comfort_level', threshold: 5 }, xp_reward: 30, rarity: 'common' },
+  { key: 'early_bird', name: '早起的鸟儿有屎拉', description: '在早上6-7点如厕', icon: 'badge-early-bird', category: 'special', condition: { type: 'session_hour_range', threshold: 6 }, xp_reward: 50, rarity: 'rare' },
+  { key: 'night_owl', name: '夜猫子', description: '在凌晨0-3点如厕', icon: 'badge-night-owl', category: 'special', condition: { type: 'session_hour_range', threshold: 0 }, xp_reward: 50, rarity: 'rare' },
+]
+
+const PURCHASE_ITEMS = [
+  { name: '瑞幸咖啡', price: 9.9, icon: 'coffee', sort: 1 },
+  { name: '蜜雪冰城', price: 4, icon: 'ice-cream', sort: 2 },
+  { name: '奶茶', price: 15, icon: 'bubble-tea', sort: 3 },
+  { name: '煎饼果子', price: 8, icon: 'pancake', sort: 4 },
+  { name: '包子', price: 2, icon: 'bao', sort: 5 },
+  { name: '地铁票', price: 3, icon: 'metro', sort: 6 },
+  { name: '可乐', price: 3.5, icon: 'cola', sort: 7 },
+  { name: '矿泉水', price: 2, icon: 'water', sort: 8 },
+  { name: '方便面', price: 5, icon: 'noodle', sort: 9 },
+  { name: '视频会员日卡', price: 6, icon: 'vip', sort: 10 },
+  { name: '麦当劳巨无霸', price: 25, icon: 'burger', sort: 11 },
+  { name: '电影票', price: 35, icon: 'movie', sort: 12 },
+  { name: '外卖一顿饭', price: 25, icon: 'takeout', sort: 13 },
+  { name: 'AJ球鞋', price: 1299, icon: 'sneaker', sort: 14 },
+  { name: 'Switch游戏', price: 299, icon: 'game', sort: 15 },
+  { name: 'iPhone', price: 7999, icon: 'phone', sort: 16 },
+]
+
+module.exports = { BADGE_DEFINITIONS, PURCHASE_ITEMS }

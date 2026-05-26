@@ -6,6 +6,7 @@ const sessionsCollection = db.collection('poop-sessions')
 const usersCollection = db.collection('users')
 const { calculateEarnings, getFeedbackType, calculateSessionXP, getTitleByXP } = require('../../common/salary-calc')
 const { getAuthUid, getDateStringCN, getDayStartCN, getDayEndCN, isWorkHoursCN, getHourCN } = require('../../common/utils')
+const { validateSessionParams } = require('../../common/validators')
 
 exports.main = async (event, context) => {
   const { action, params } = event
@@ -32,26 +33,11 @@ async function createSession(params, context) {
 
   const { start_time, end_time, comfort_level, note } = params
 
-  if (!start_time || !end_time || comfort_level === undefined) {
-    return { code: 400, msg: '开始时间、结束时间和舒适度为必填' }
-  }
-  if (comfort_level < 1 || comfort_level > 5 || !Number.isInteger(comfort_level)) {
-    return { code: 400, msg: '舒适度范围: 1-5整数' }
-  }
-  if (end_time <= start_time) {
-    return { code: 400, msg: '结束时间必须大于开始时间' }
-  }
+  const validation = validateSessionParams(params)
+  if (!validation.valid) return { code: 400, msg: validation.msg }
+  const durationSeconds = validation.durationSeconds
 
   const now = Date.now()
-  const MAX_FUTURE_TOLERANCE = 60000
-  if (start_time > now + MAX_FUTURE_TOLERANCE) {
-    return { code: 400, msg: '不能提交未来的如厕记录' }
-  }
-
-  const durationSeconds = Math.round((end_time - start_time) / 1000)
-  if (durationSeconds < 1) return { code: 400, msg: '如厕时长太短' }
-  if (durationSeconds > 7200) return { code: 400, msg: '单次如厕不能超过2小时' }
-
   const userRes = await usersCollection.doc(uid).get()
   if (!userRes.data || userRes.data.length === 0) {
     return { code: 404, msg: '用户不存在' }
@@ -121,6 +107,17 @@ async function createSession(params, context) {
     updated_at: now,
   })
 
+  let achievementResult = null
+  try {
+    const achievementChecker = require('../achievement-checker/index')
+    const achRes = await achievementChecker._checkForUser(uid, { session })
+    if (achRes.code === 0 && achRes.data.newly_earned.length > 0) {
+      achievementResult = achRes.data
+    }
+  } catch (e) {
+    console.error('成就检测失败', e)
+  }
+
   return {
     code: 0,
     msg: '记录成功',
@@ -133,6 +130,7 @@ async function createSession(params, context) {
       current_title: newTitle.title,
       leveled_up: leveledUp,
       streak_days: newStreakDays,
+      achievements: achievementResult,
     },
   }
 }

@@ -5,7 +5,9 @@ const dbCmd = db.command
 const groupsCollection = db.collection('groups')
 const usersCollection = db.collection('users')
 const sessionsCollection = db.collection('poop-sessions')
+const badgesCollection = db.collection('badges')
 const { getAuthUid } = require('../../common/utils')
+const { getTitleByXP } = require('../../common/salary-calc')
 
 exports.main = async (event, context) => {
   const { action, params } = event
@@ -179,6 +181,31 @@ async function getLeaderboard(params, context) {
   const sortKey = sort_by === 'duration' ? 'total_duration' : sort_by === 'sessions' ? 'total_sessions' : 'total_earnings'
   rankings.sort((a, b) => b[sortKey] - a[sortKey])
   rankings.forEach((r, i) => { r.rank = i + 1 })
+
+  if (period === 'week' && sort_by === 'earnings' && rankings.length > 0 && rankings[0].total_earnings > 0) {
+    const topUserId = rankings[0].user_id
+    try {
+      const topUserRes = await usersCollection.doc(topUserId).field({ badges: true, total_xp: true }).get()
+      const topUser = topUserRes.data?.[0]
+      if (topUser && !(topUser.badges || []).includes('weekly_king')) {
+        const badgeRes = await badgesCollection.where({ key: 'weekly_king' }).limit(1).get()
+        if (badgeRes.data?.length > 0) {
+          const badge = badgeRes.data[0]
+          const newTotalXP = (topUser.total_xp || 0) + badge.xp_reward
+          const newTitle = getTitleByXP(newTotalXP)
+          await usersCollection.doc(topUserId).update({
+            badges: dbCmd.push(['weekly_king']),
+            total_xp: dbCmd.inc(badge.xp_reward),
+            current_title: newTitle.title,
+            current_level: newTitle.level,
+            updated_at: Date.now(),
+          })
+        }
+      }
+    } catch (e) {
+      console.error('weekly_king 徽章颁发失败', e)
+    }
+  }
 
   return { code: 0, data: { rankings, group_name: group.name, period } }
 }
