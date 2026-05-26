@@ -1107,20 +1107,26 @@ class MockServer {
 }
 
 // 统一的 API 客户端接口
+// 控制开关: true=使用本地Mock数据库, false=连真实uniCloud后端
+const USE_MOCK = false
+
 export async function apiCall<T = any>(
   name: string,
   action: string,
   params: any = {}
 ): Promise<ApiResponse<T>> {
   // 检查是否具备可运行的真实 uniCloud 环境并请求云函数
-  const isUniCloudValid = typeof uniCloud !== 'undefined' && uniCloud.callFunction
+  const isUniCloudValid = !USE_MOCK && typeof uniCloud !== 'undefined' && uniCloud.callFunction
   
   if (isUniCloudValid) {
     try {
-      console.log(`[uniCloud Client] calling ${name}.${action} with params:`, params)
+      // 自动注入 userId（从本地存储获取已登录用户ID）
+      const uid = MockDatabase.get<string | null>('current_uid', null)
+      const callParams = uid ? { ...params, userId: uid } : params
+      console.log(`[uniCloud Client] calling ${name}.${action} with params:`, callParams)
       const res = await uniCloud.callFunction({
         name,
-        data: { action, params }
+        data: { action, params: callParams }
       })
       const result = res.result as ApiResponse<T>
       if (result && result.code !== undefined) {

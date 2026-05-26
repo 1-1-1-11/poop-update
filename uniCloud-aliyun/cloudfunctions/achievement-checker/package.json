@@ -1,6 +1,0 @@
-{
-  "name": "achievement-checker",
-  "dependencies": {
-    "uni-id-common": "latest"
-  }
-}

@@ -1,6 +1,0 @@
-{
-  "name": "report-generator",
-  "dependencies": {
-    "uni-id-common": "latest"
-  }
-}

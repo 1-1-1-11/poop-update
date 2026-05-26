@@ -1,6 +1,0 @@
-{
-  "name": "session-manager",
-  "dependencies": {
-    "uni-id-common": "latest"
-  }
-}
