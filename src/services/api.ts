@@ -653,6 +653,9 @@ class MockServer {
         case 'groups_joined':
           met = (user.group_ids || []).length >= threshold
           break
+        case 'groups_created':
+          met = MockDatabase.get<Group[]>('groups', []).filter(g => g.creator_id === uid).length >= threshold
+          break
         case 'session_over_seconds':
           met = session && session.duration_seconds >= threshold
           break
@@ -876,6 +879,11 @@ class MockServer {
       MockDatabase.set('user', user)
     }
 
+    // 创建后自动调用成就检查 (group_leader 和 first_group 徽章)
+    try {
+      MockServer.checkAchievements({ session: null })
+    } catch (_) {}
+
     return { code: 0, msg: '战队创建成功', data: { group: newGroup } }
   }
 
@@ -998,12 +1006,31 @@ class MockServer {
     ]
 
     const sortKey = sort_by === 'duration' ? 'total_duration' : sort_by === 'sessions' ? 'total_sessions' : 'total_earnings'
-    
+
     teammates.sort((a: any, b: any) => b[sortKey] - a[sortKey])
     const rankings = teammates.map((t, idx) => ({
       ...t,
       rank: idx + 1
     }))
+
+    // 周排行榜第一名颁发 weekly_king 徽章 (匹配后端 group-manager 行为)
+    if (period === 'week' && sort_by === 'earnings' && rankings.length > 0 && user && rankings[0].total_earnings > 0) {
+      const topUserId = rankings[0].user_id
+      if (topUserId === uid && !user.badges.includes('weekly_king')) {
+        const badgeDef = BADGE_DEFINITIONS.find(b => b.key === 'weekly_king')
+        if (badgeDef) {
+          user.badges = [...(user.badges || []), 'weekly_king']
+          const bonusXP = badgeDef.xp_reward
+          const newTotalXP = (user.total_xp || 0) + bonusXP
+          const newTitleDef = getTitleByXP(newTotalXP)
+          user.total_xp = newTotalXP
+          user.current_title = newTitleDef.title
+          user.current_level = newTitleDef.level
+          user.updated_at = Date.now()
+          MockDatabase.set('user', user)
+        }
+      }
+    }
 
     return {
       code: 0,
