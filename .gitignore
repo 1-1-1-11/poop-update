@@ -4,3 +4,5 @@ dist/
 *.local
 unpackage/
 .hbuilderx/
+project.private.config.json
+.playwright-mcp/
