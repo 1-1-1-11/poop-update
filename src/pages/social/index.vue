@@ -1,138 +1,144 @@
 <template>
-  <view class="social-container">
-    <!-- 未加入战队面板 -->
-    <view class="no-group-panel" v-if="!activeGroupId">
-      <view class="welcome-card">
-        <text class="banner-icon">👥</text>
-        <text class="banner-title">拉屎战队</text>
-        <text class="banner-desc">独乐乐不如众乐乐！与同事组队PK，看谁才是办公室的“带薪摸鱼之王”。</text>
+  <view class="page-container" :class="themeStore.themeClass">
+    <PageTransition>
+      <!-- 未加入战队面板 -->
+      <view class="no-group-panel" v-if="!activeGroupId">
+        <view class="welcome-card-flat">
+          <text class="banner-title">{{ themeStore.t('socialTitle') }}</text>
+          <text class="banner-desc">{{ groupIntroText }}</text>
+        </view>
+
+        <!-- 加入战队 -->
+        <ThemeCard customClass="action-card-flat">
+          <view class="card-title">// {{ joinGroupTitle }}</view>
+          <view class="input-row">
+            <input 
+              class="input" 
+              type="text" 
+              v-model="inviteCodeInput"
+              :placeholder="invitePlaceholder"
+              maxlength="10"
+            />
+            <button class="action-btn join-btn" :loading="loading" @tap="handleJoinGroup">加入</button>
+          </view>
+        </ThemeCard>
+
+        <!-- 创建战队 -->
+        <ThemeCard customClass="action-card-flat">
+          <view class="card-title">// {{ createGroupTitle }}</view>
+          <view class="input-row">
+            <input 
+              class="input" 
+              type="text" 
+              v-model="newGroupName" 
+              :placeholder="createPlaceholder" 
+              maxlength="20"
+            />
+            <button class="action-btn create-btn" :loading="loading" @tap="handleCreateGroup">创建</button>
+          </view>
+        </ThemeCard>
       </view>
 
-      <!-- 加入战队 -->
-      <view class="action-card">
-        <view class="card-title">加入现有战队</view>
-        <view class="input-row">
-          <input 
-            class="input" 
-            type="text" 
-            v-model="inviteCodeInput"
-            placeholder="请输入6位战队邀请码"
-            maxlength="10"
-          />
-          <button class="action-btn join-btn" :loading="loading" @tap="handleJoinGroup">加入</button>
-        </view>
-      </view>
+      <!-- 已加入战队面板 -->
+      <view class="group-panel" v-else>
+        <!-- 战队信息头部 (扁平头部板) -->
+        <ThemeCard customClass="group-header-board-flat">
+          <view class="meta">
+            <text class="group-name">{{ groupName }}</text>
+            <text class="invite-code">邀请码: <text class="code-text" @tap="copyInviteCode">{{ inviteCode }}</text> (点击复制)</text>
+          </view>
+          <button class="leave-btn" @tap="handleLeaveGroup">退出</button>
+        </ThemeCard>
 
-      <!-- 创建战队 -->
-      <view class="action-card">
-        <view class="card-title">创建全新战队</view>
-        <view class="input-row">
-          <input 
-            class="input" 
-            type="text" 
-            v-model="newGroupName" 
-            placeholder="请输入战队名称 (如: 拉屎天团)" 
-            maxlength="20"
-          />
-          <button class="action-btn create-btn" :loading="loading" @tap="handleCreateGroup">创建</button>
-        </view>
-      </view>
-    </view>
-
-    <!-- 已加入战队面板 -->
-    <view class="group-panel" v-else>
-      <!-- 战队信息头部 -->
-      <view class="group-header-card">
-        <view class="meta">
-          <text class="group-name">🛡️ {{ groupName }}</text>
-          <text class="invite-code">邀请码: <text class="code-text" @tap="copyInviteCode">{{ inviteCode }}</text> (点击复制)</text>
-        </view>
-        <button class="leave-btn" @tap="handleLeaveGroup">退出战队</button>
-      </view>
-
-      <!-- 排行榜与动态标签 -->
-      <view class="sub-tabs">
-        <view 
-          class="sub-tab" 
-          :class="{ active: activeSubTab === 'rank' }"
-          @tap="activeSubTab = 'rank'"
-        >
-          周排行榜
-        </view>
-        <view 
-          class="sub-tab" 
-          :class="{ active: activeSubTab === 'feed' }"
-          @tap="activeSubTab = 'feed'"
-        >
-          战队动态
-        </view>
-      </view>
-
-      <!-- 排行榜列表 -->
-      <view class="tab-content" v-if="activeSubTab === 'rank'">
-        <view class="rank-list">
+        <!-- 排行榜与动态标签 (下划线式 tabs) -->
+        <view class="sub-tabs">
           <view 
-            class="rank-row-item" 
-            v-for="item in leaderboard" 
-            :key="item.user_id"
-            :class="{ 'is-me': item.user_id === userStore.user?._id }"
+            class="sub-tab" 
+            :class="{ active: activeSubTab === 'rank' }"
+            @tap="activeSubTab = 'rank'"
           >
-            <!-- 排名数 -->
-            <view class="rank-num">
-              <text v-if="item.rank === 1">🥇</text>
-              <text v-else-if="item.rank === 2">🥈</text>
-              <text v-else-if="item.rank === 3">🥉</text>
-              <text v-else>{{ item.rank }}</text>
-            </view>
-            <!-- 成员头像及名字 -->
-            <view class="member-meta">
-              <text class="member-name">{{ item.nickname }}</text>
-              <text class="member-title">{{ item.current_title }}</text>
-            </view>
-            <!-- 摸鱼战报数据 -->
-            <view class="member-stats">
-              <text class="stats-val">¥{{ item.total_earnings.toFixed(2) }}</text>
-              <text class="stats-label">{{ item.total_sessions }}次 | {{ formatMinutes(item.total_duration) }}</text>
+            {{ rankTabLabel }}
+          </view>
+          <view 
+            class="sub-tab" 
+            :class="{ active: activeSubTab === 'feed' }"
+            @tap="activeSubTab = 'feed'"
+          >
+            {{ feedTabLabel }}
+          </view>
+        </view>
+
+        <!-- 排行榜列表 (扁平对账单行) -->
+        <view class="tab-content" v-if="activeSubTab === 'rank'">
+          <view class="rank-list">
+            <view 
+              class="rank-row-flat" 
+              v-for="item in leaderboard" 
+              :key="item.user_id"
+              :class="{ 'is-me': item.user_id === userStore.user?._id }"
+            >
+              <!-- 排名数 (对账单单号风格) -->
+              <view class="rank-num">
+                <text class="num-text">{{ String(item.rank).padStart(2, '0') }}</text>
+              </view>
+              <!-- 成员头像及名字 -->
+              <view class="member-meta">
+                <text class="member-name">{{ item.nickname }}</text>
+                <text class="member-title">{{ item.current_title }}</text>
+              </view>
+              <!-- 摸鱼战报数据 -->
+              <view class="member-stats">
+                <view class="stats-val">
+                  <NumberTicker :value="item.total_earnings" prefix="¥" :precision="2" />
+                </view>
+                <text class="stats-label">{{ item.total_sessions }}次 | {{ formatMinutes(item.total_duration) }}</text>
+              </view>
             </view>
           </view>
         </view>
-      </view>
 
-      <!-- 动态墙 -->
-      <view class="tab-content" v-if="activeSubTab === 'feed'">
-        <view class="feed-list" v-if="feedList.length > 0">
-          <view 
-            class="feed-card" 
-            v-for="(feed, idx) in feedList" 
-            :key="idx"
-          >
-            <view class="feed-header">
-              <text class="feed-name">👤 {{ feed.display_name }}</text>
-              <text class="feed-time">{{ formatTimeAgo(feed.created_at) }}</text>
-            </view>
-            <view class="feed-body">
-              完成带薪拉屎，坚持了 <text class="highlight">{{ formatMinutes(feed.duration_seconds) }}</text>，为自己捞回带薪薪资 <text class="highlight price">¥{{ feed.earnings.toFixed(2) }}</text>！
+        <!-- 动态墙 (流水记录行) -->
+        <view class="tab-content" v-if="activeSubTab === 'feed'">
+          <view class="feed-list" v-if="feedList.length > 0">
+            <view 
+              class="feed-row-flat" 
+              v-for="(feed, idx) in feedList" 
+              :key="idx"
+            >
+              <view class="feed-header">
+                <text class="feed-name">{{ feed.display_name }}</text>
+                <text class="feed-time">{{ formatTimeAgo(feed.created_at) }}</text>
+              </view>
+              <view class="feed-body">
+                {{ formatFeedBody(feed) }}
+              </view>
             </view>
           </view>
-        </view>
-        <view class="empty-state" v-else>
-          <text class="empty-emoji">📝</text>
-          <text class="empty-text">当前暂无任何摸鱼动态...</text>
+          <view class="empty-state" v-else>
+            <text class="empty-text">NO RECORD / 暂无活动动态</text>
+          </view>
         </view>
       </view>
-    </view>
+    </PageTransition>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '../../stores/user'
+import { useThemeStore } from '../../stores/theme'
 import { apiCall } from '../../services/api'
 import { formatMinutes, formatTimeAgo } from '../../utils/formatters'
 import type { Group, LeaderboardEntry } from '../../utils/types'
 
+// Components
+import PageTransition from '../../components/PageTransition.vue'
+import ThemeCard from '../../components/ThemeCard.vue'
+import NumberTicker from '../../components/NumberTicker.vue'
+
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 
 const activeGroupId = ref<string>('')
 const groupName = ref<string>('')
@@ -150,6 +156,32 @@ onShow(async () => {
   await fetchGroupStatus()
 })
 
+// Dynamic labels
+const groupIntroText = computed(() => {
+  return themeStore.isStock
+    ? '量化套利，组队取暖！与同事组队PK持仓收益，看谁才是办公室的“带薪交易大师”。'
+    : '科学研究，协同共进！与学术伙伴组队打卡实验，看谁才是实验室的“高效科研劳模”。'
+})
+
+const joinGroupTitle = computed(() => themeStore.isStock ? '加入现有证券团队' : '加入现有课题组')
+const createGroupTitle = computed(() => themeStore.isStock ? '创建自营交易团队' : '创建全新课题组')
+
+const invitePlaceholder = computed(() => themeStore.isStock ? '输入团队6位邀请码' : '输入课题组6位验证码')
+const createPlaceholder = computed(() => {
+  return themeStore.isStock ? '团队名称 (如: 游资大本营)' : '课题组名称 (如: 重点攻坚组)'
+})
+
+const rankTabLabel = computed(() => themeStore.isStock ? '团队对账单' : '课题组产出榜')
+const feedTabLabel = computed(() => themeStore.isStock ? '团队委单流水' : '课题组实验动态')
+
+const formatFeedBody = (feed: any) => {
+  const mins = formatMinutes(feed.duration_seconds)
+  const money = `¥${feed.earnings.toFixed(2)}`
+  return themeStore.isStock
+    ? `执行交易委单，持仓时段达 ${mins}，为账户增加浮动盈亏 ${money}！`
+    : `开展化学/生物反应，实验观察持续时间 ${mins}，产出科研能量 ${money}！`
+}
+
 const fetchGroupStatus = async () => {
   try {
     const res = await apiCall<{ groups: Group[] }>('group-manager', 'list')
@@ -159,7 +191,6 @@ const fetchGroupStatus = async () => {
       groupName.value = activeGroup.name
       inviteCode.value = activeGroup.invite_code
       
-      // 加载排行榜和动态
       await fetchLeaderboard()
       await fetchFeed()
     } else {
@@ -213,7 +244,7 @@ const handleJoinGroup = async () => {
     })
     loading.value = false
     if (res.code === 0) {
-      uni.showToast({ title: '成功加入战队！', icon: 'success' })
+      uni.showToast({ title: '已成功加入团队！', icon: 'none' })
       inviteCodeInput.value = ''
       await fetchGroupStatus()
     } else {
@@ -227,7 +258,7 @@ const handleJoinGroup = async () => {
 
 const handleCreateGroup = async () => {
   if (!newGroupName.value.trim()) {
-    uni.showToast({ title: '请输入战队名称', icon: 'none' })
+    uni.showToast({ title: '请输入名称', icon: 'none' })
     return
   }
   loading.value = true
@@ -237,7 +268,7 @@ const handleCreateGroup = async () => {
     })
     loading.value = false
     if (res.code === 0) {
-      uni.showToast({ title: '战队创建成功！', icon: 'success' })
+      uni.showToast({ title: '团队创建成功！', icon: 'none' })
       newGroupName.value = ''
       await fetchGroupStatus()
     } else {
@@ -252,7 +283,7 @@ const handleCreateGroup = async () => {
 const handleLeaveGroup = () => {
   uni.showModal({
     title: '退出确认',
-    content: `您确定要退出「${groupName.value}」战队吗？`,
+    content: `确定解约或退出「${groupName.value}」组织吗？`,
     success: async (mRes) => {
       if (mRes.confirm) {
         try {
@@ -260,7 +291,7 @@ const handleLeaveGroup = () => {
             group_id: activeGroupId.value
           })
           if (res.code === 0) {
-            uni.showToast({ title: '已成功退出战队', icon: 'success' })
+            uni.showToast({ title: '已成功退出', icon: 'none' })
             await fetchGroupStatus()
           } else {
             uni.showToast({ title: res.msg || '退出失败', icon: 'none' })
@@ -277,71 +308,63 @@ const copyInviteCode = () => {
   uni.setClipboardData({
     data: inviteCode.value,
     success: () => {
-      uni.showToast({ title: '邀请码已复制', icon: 'success' })
+      uni.showToast({ title: '已复制邀请码', icon: 'none' })
     }
   })
 }
 </script>
 
 <style lang="scss" scoped>
-.social-container {
-  padding: 32rpx;
+.page-container {
+  padding: 40rpx;
   min-height: 100vh;
-  background-color: $bg-primary;
+  box-sizing: border-box;
+  background-color: var(--bg-primary);
   display: flex;
   flex-direction: column;
-  gap: 32rpx;
-  box-sizing: border-box;
+  gap: 40rpx;
 }
 
 // 欢迎卡
-.welcome-card {
-  background: linear-gradient(135deg, #ffffff 0%, #fffaf5 100%);
-  border-radius: $radius-lg;
+.welcome-card-flat {
+  background: var(--bg-card);
+  border: 1rpx solid var(--border);
   padding: 40rpx;
-  box-shadow: $shadow-sm;
-  border: 1rpx solid #ffe8d8;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   margin-bottom: 24rpx;
 
-  .banner-icon {
-    font-size: 110rpx;
-    margin-bottom: 16rpx;
-  }
-
   .banner-title {
     font-size: 36rpx;
     font-weight: 800;
-    color: $color-primary-dark;
+    color: var(--accent);
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 
   .banner-desc {
     font-size: 24rpx;
-    color: $text-secondary;
+    color: var(--text-secondary);
     margin-top: 16rpx;
-    line-height: 1.4;
+    line-height: 1.5;
   }
 }
 
 // 交互操作卡
-.action-card {
-  background-color: $bg-card;
-  border-radius: $radius-lg;
-  padding: 36rpx;
-  box-shadow: $shadow-sm;
-  border: 1rpx solid #ffe8d8;
+.action-card-flat {
+  margin-bottom: 24rpx;
   display: flex;
   flex-direction: column;
-  margin-bottom: 24rpx;
 
   .card-title {
-    font-size: 26rpx;
-    font-weight: bold;
-    color: $text-secondary;
+    font-size: 24rpx;
+    font-weight: 800;
+    color: var(--text-primary);
     margin-bottom: 20rpx;
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 
   .input-row {
@@ -350,40 +373,35 @@ const copyInviteCode = () => {
 
     .input {
       flex: 1;
-      background-color: #fafafa;
-      border: 1rpx solid #e0e0e0;
-      border-radius: $radius-sm;
+      background-color: var(--bg-primary);
+      border: 1rpx solid var(--border);
       height: 80rpx;
       padding: 0 20rpx;
-      font-size: 26rpx;
-      color: $text-primary;
+      font-size: 24rpx;
+      color: var(--text-primary);
       box-sizing: border-box;
+      font-family: var(--font-mono);
     }
 
     .action-btn {
       height: 80rpx;
       line-height: 80rpx;
-      font-size: 26rpx;
-      font-weight: bold;
-      border-radius: $radius-sm;
+      font-size: 24rpx;
+      font-weight: 800;
+      border-radius: var(--radius-sm, 4rpx);
       padding: 0 36rpx;
       border: none;
       color: #ffffff;
-      box-shadow: 0 4rpx 10rpx rgba(0,0,0,0.1);
+      text-transform: uppercase;
     }
 
-    .join-btn { background-color: $color-info; }
-    .create-btn { background-color: $color-primary; }
+    .join-btn { background-color: var(--accent-info); }
+    .create-btn { background-color: var(--accent); }
   }
 }
 
 // 战队页卡
-.group-header-card {
-  background: linear-gradient(135deg, #ffffff 0%, #fffcf8 100%);
-  border-radius: $radius-lg;
-  padding: 32rpx;
-  box-shadow: $shadow-sm;
-  border: 1rpx solid #ffe8d8;
+.group-header-board-flat {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -395,66 +413,60 @@ const copyInviteCode = () => {
 
     .group-name {
       font-size: 32rpx;
-      font-weight: bold;
-      color: $text-primary;
+      font-weight: 800;
+      color: var(--text-primary);
     }
 
     .invite-code {
       font-size: 20rpx;
-      color: $text-hint;
+      color: var(--text-secondary);
 
       .code-text {
-        color: $color-primary-dark;
-        font-weight: bold;
+        color: var(--accent-warn);
+        font-weight: 800;
         text-decoration: underline;
+        font-family: var(--font-mono);
       }
     }
   }
 
   .leave-btn {
     font-size: 22rpx;
+    font-weight: 800;
     background-color: transparent;
-    color: #f44336;
-    border: 2rpx solid #ffcdd2;
+    color: var(--accent-warn);
+    border: 1rpx solid var(--accent-warn);
     height: 60rpx;
     line-height: 60rpx;
-    border-radius: $radius-round;
+    border-radius: var(--radius-sm, 4rpx);
     padding: 0 24rpx;
+    text-transform: uppercase;
 
     &:active {
-      background-color: #ffebee;
+      background-color: rgba(231, 76, 60, 0.05);
     }
   }
 }
 
-// 标签选项
+// 标签选项 (下划线)
 .sub-tabs {
   display: flex;
-  border-bottom: 2rpx solid #e0e0e0;
+  border-bottom: 2rpx solid var(--border);
   margin-top: 16rpx;
 
   .sub-tab {
     flex: 1;
     text-align: center;
-    font-size: 26rpx;
-    font-weight: bold;
-    color: $text-secondary;
-    padding: 20rpx 0;
-    position: relative;
+    font-size: 24rpx;
+    font-weight: 800;
+    color: var(--text-secondary);
+    padding: 24rpx 0;
+    border-bottom: 4rpx solid transparent;
+    transition: all 0.2s ease;
 
     &.active {
-      color: $color-primary-dark;
-
-      &::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 30%;
-        right: 30%;
-        height: 4rpx;
-        background-color: $color-primary;
-        border-radius: 999rpx;
-      }
+      border-bottom-color: var(--accent);
+      color: var(--accent);
     }
   }
 }
@@ -463,31 +475,28 @@ const copyInviteCode = () => {
 .rank-list {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
   margin-top: 24rpx;
 }
 
-.rank-row-item {
+.rank-row-flat {
   display: flex;
   align-items: center;
-  background-color: $bg-card;
-  border-radius: $radius-md;
-  padding: 24rpx;
-  border: 1rpx solid #eee;
-  box-shadow: $shadow-sm;
+  padding: 30rpx 0;
+  border-bottom: 1rpx solid var(--border);
 
   &.is-me {
-    background: linear-gradient(90deg, #fffaf5 0%, #fff2e8 100%);
-    border-color: #ffd8c0;
+    border-left: 4rpx solid var(--accent);
+    padding-left: 12rpx;
   }
 
   .rank-num {
-    font-size: 34rpx;
+    font-size: 26rpx;
     width: 60rpx;
     display: flex;
     justify-content: center;
-    color: $text-secondary;
-    font-weight: bold;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-weight: 800;
   }
 
   .member-meta {
@@ -497,18 +506,18 @@ const copyInviteCode = () => {
     gap: 4rpx;
 
     .member-name {
-      font-size: 26rpx;
-      font-weight: bold;
-      color: $text-primary;
+      font-size: 24rpx;
+      font-weight: 800;
+      color: var(--text-primary);
     }
 
     .member-title {
       font-size: 18rpx;
-      color: $text-hint;
-      background-color: #f0f0f0;
+      color: var(--text-secondary);
+      background-color: var(--border);
       padding: 2rpx 8rpx;
-      border-radius: 4rpx;
       align-self: flex-start;
+      font-family: var(--font-mono);
     }
   }
 
@@ -520,15 +529,16 @@ const copyInviteCode = () => {
     gap: 4rpx;
 
     .stats-val {
-      font-size: 30rpx;
-      font-weight: bold;
-      color: $color-primary-dark;
-      font-family: 'Courier New', Courier, monospace;
+      font-size: 26rpx;
+      font-weight: 800;
+      color: var(--accent);
+      font-family: var(--font-mono);
     }
 
     .stats-label {
       font-size: 18rpx;
-      color: $text-hint;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
     }
   }
 }
@@ -537,49 +547,38 @@ const copyInviteCode = () => {
 .feed-list {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
   margin-top: 24rpx;
 }
 
-.feed-card {
-  background-color: $bg-card;
-  border-radius: $radius-md;
-  padding: 24rpx 32rpx;
-  box-shadow: $shadow-sm;
-  border: 1rpx solid #ffe8d8;
+.feed-row-flat {
+  display: flex;
+  flex-direction: column;
+  padding: 30rpx 0;
+  border-bottom: 1rpx solid var(--border);
+  gap: 12rpx;
 
   .feed-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12rpx;
 
     .feed-name {
-      font-size: 24rpx;
-      font-weight: bold;
-      color: $text-secondary;
+      font-size: 22rpx;
+      font-weight: 800;
+      color: var(--text-primary);
     }
 
     .feed-time {
       font-size: 18rpx;
-      color: $text-hint;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
     }
   }
 
   .feed-body {
-    font-size: 24rpx;
-    color: $text-primary;
-    line-height: 1.4;
-
-    .highlight {
-      font-weight: bold;
-      color: $text-secondary;
-    }
-
-    .highlight.price {
-      color: $color-primary-dark;
-      font-family: 'Courier New', Courier, monospace;
-    }
+    font-size: 22rpx;
+    color: var(--text-secondary);
+    line-height: 1.5;
   }
 }
 
@@ -591,13 +590,10 @@ const copyInviteCode = () => {
   justify-content: center;
   padding: 100rpx 0;
 
-  .empty-emoji {
-    font-size: 80rpx;
-    margin-bottom: 16rpx;
-  }
   .empty-text {
-    font-size: 24rpx;
-    color: $text-hint;
+    font-size: 22rpx;
+    color: var(--text-secondary);
+    letter-spacing: 2rpx;
   }
 }
 </style>

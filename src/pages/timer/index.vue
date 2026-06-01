@@ -1,59 +1,68 @@
 <template>
-  <view class="timer-container">
-    <!-- 头部说明 -->
-    <view class="header-section">
-      <text class="timer-status">努力排泄中...</text>
-      <text class="timer-rate">时薪: ¥{{ hourlyRate.toFixed(2) }} | 秒薪: ¥{{ secondRate.toFixed(4) }}</text>
-    </view>
+  <view class="page-container" :class="themeStore.themeClass">
+    <PageTransition>
+      <!-- 头部说明 -->
+      <view class="header-section">
+        <text class="timer-status">{{ themeStore.t('timerStatus') }}</text>
+        <text class="timer-rate">{{ rateText }}</text>
+      </view>
 
-    <!-- 呼吸圆环与计时器 -->
-    <view class="circle-timer-section">
-      <view class="pulsing-orb" :class="{ 'warning-orb': isLongSit }">
-        <view class="orb-wave wave-1"></view>
-        <view class="orb-wave wave-2"></view>
-        <view class="orb-center">
-          <text class="time-display">{{ formatTime(poopStore.elapsedSeconds) }}</text>
-          <text class="realtime-text">已坚持</text>
+      <!-- 环形进度条与计时器 -->
+      <view class="circle-timer-section">
+        <ProgressRing 
+          :percentage="progressPercent" 
+          :size="320" 
+          :strokeWidth="10" 
+          :color="ringColor" 
+          :bgStroke="'var(--border)'"
+        >
+          <view class="timer-inner">
+            <text class="time-display" :class="{ 'warning-text': isLongSit }">
+              {{ formatTime(poopStore.elapsedSeconds) }}
+            </text>
+            <text class="timer-state-label">{{ timerStateLabel }}</text>
+          </view>
+        </ProgressRing>
+      </view>
+
+      <!-- 带薪收益展示 (扁平对账单式) -->
+      <ThemeCard customClass="earnings-card">
+        <text class="label">{{ themeStore.t('earningsRealtime') }}</text>
+        <view class="earnings-row">
+          <text class="currency">¥</text>
+          <NumberTicker 
+            class="value" 
+            :value="poopStore.realtimeEarnings" 
+            :precision="4" 
+          />
+        </view>
+        <text class="speed-indicator">{{ speedText }}</text>
+      </ThemeCard>
+
+      <!-- 久蹲警告区 (扁平左边框横条) -->
+      <view class="warning-banner-flat" v-if="isLongSit">
+        <view class="warning-content">
+          <text class="warning-title">{{ warningTitle }}</text>
+          <text class="warning-desc">{{ warningDesc }}</text>
         </view>
       </view>
-    </view>
 
-    <!-- 带薪收益展示 -->
-    <view class="earnings-card">
-      <text class="label">当前带薪收入</text>
-      <view class="earnings-row">
-        <text class="currency">¥</text>
-        <text class="value">{{ poopStore.realtimeEarnings.toFixed(2) }}</text>
+      <!-- 摸鱼电台 (BGM 辅助开关 - 极简扁平触控条) -->
+      <view class="audio-controls-flat" @tap="toggleBgm">
+        <view class="status-indicator" :class="{ 'is-active': bgmOn }"></view>
+        <text class="btn-label">{{ audioLabel }}</text>
       </view>
-      <text class="speed-indicator">以秒速 ¥{{ secondRate.toFixed(4) }} 持续增长中</text>
-    </view>
 
-    <!-- 久蹲警告区 -->
-    <view class="warning-banner" v-if="isLongSit">
-      <text class="warning-icon">⚠️</text>
-      <view class="warning-content">
-        <text class="warning-title">久蹲预警！</text>
-        <text class="warning-desc">已蹲厕超过 {{ longSitThreshold }} 分钟，为防脱肛或痔疮，建议起立！</text>
+      <!-- 底部操作区 -->
+      <view class="action-buttons">
+        <button class="finish-btn" @tap="handleFinish">
+          {{ finishButtonText }}
+        </button>
+        <button class="abort-btn" @tap="handleAbort">
+          {{ abortButtonText }}
+        </button>
       </view>
-    </view>
-
-    <!-- 摸鱼电台 (BGM 辅助开关) -->
-    <view class="audio-controls">
-      <view class="control-btn" @tap="toggleBgm">
-        <text class="icon">{{ bgmOn ? '🎵' : '🔇' }}</text>
-        <text class="label">摸鱼白噪音: {{ bgmOn ? '大自然水流声' : '静音' }}</text>
-      </view>
-    </view>
-
-    <!-- 底部操作区 -->
-    <view class="action-buttons">
-      <button class="finish-btn" @tap="handleFinish">
-        拉完了，去结算
-      </button>
-      <button class="abort-btn" @tap="handleAbort">
-        中途放弃
-      </button>
-    </view>
+    </PageTransition>
   </view>
 </template>
 
@@ -61,15 +70,23 @@
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { useUserStore } from '../../stores/user'
 import { usePoopStore } from '../../stores/poop'
+import { useThemeStore } from '../../stores/theme'
 import { calculateHourlyRate, calculatePerSecondRate } from '../../utils/salary-calculator'
+
+// Components
+import PageTransition from '../../components/PageTransition.vue'
+import ThemeCard from '../../components/ThemeCard.vue'
+import ProgressRing from '../../components/ProgressRing.vue'
+import NumberTicker from '../../components/NumberTicker.vue'
 
 const userStore = useUserStore()
 const poopStore = usePoopStore()
+const themeStore = useThemeStore()
 
 const bgmOn = ref(false)
 const audioContext = ref<any>(null)
 
-// 初始化白噪音音频 (使用 uni-app 内置音频 API)
+// 初始化白噪音音频
 const initAudio = () => {
   if (audioContext.value) return
   try {
@@ -111,19 +128,24 @@ const isLongSit = computed(() => {
   return poopStore.elapsedSeconds >= longSitThreshold.value * 60
 })
 
+const progressPercent = computed(() => {
+  const total = longSitThreshold.value * 60
+  return Math.min((poopStore.elapsedSeconds / total) * 100, 100)
+})
+
+const ringColor = computed(() => {
+  if (isLongSit.value) return 'var(--accent-warn)'
+  return 'var(--accent)'
+})
+
 // 监听久蹲，产生振动提醒
 let lastVibrateTime = 0
 watch(() => poopStore.elapsedSeconds, (sec) => {
   if (isLongSit.value) {
     const now = Date.now()
-    // 每 2 分钟振动提醒一次
-    if (now - lastVibrateTime > 120000) {
+    if (now - lastVibrateTime > 120000) { // 每 2 分钟提醒一次
       lastVibrateTime = now
-      uni.vibrateLong({
-        success: () => {
-          console.log('久蹲长振动提醒成功')
-        }
-      })
+      uni.vibrateLong({})
     }
   }
 })
@@ -141,6 +163,46 @@ const formatTime = (totalSeconds: number): string => {
   return `${pad(m)}:${pad(s)}`
 }
 
+// 动态主题文字计算
+const rateText = computed(() => {
+  return themeStore.isStock
+    ? `时薪: ¥${hourlyRate.value.toFixed(2)} | 报价/秒: ¥${secondRate.value.toFixed(4)}`
+    : `代谢基准: ¥${hourlyRate.value.toFixed(2)} | 代谢率/秒: ¥${secondRate.value.toFixed(4)}`
+})
+
+const timerStateLabel = computed(() => {
+  return themeStore.isStock ? '持仓中' : '反应时长'
+})
+
+const speedText = computed(() => {
+  return themeStore.isStock
+    ? `以秒速 ¥${secondRate.value.toFixed(4)} 持续增值`
+    : `以代谢率 ¥${secondRate.value.toFixed(4)} 释放能量`
+})
+
+const warningTitle = computed(() => {
+  return themeStore.isStock ? '平仓超时预警！' : '反应器过载警报！'
+})
+
+const warningDesc = computed(() => {
+  return themeStore.isStock
+    ? `持仓已超过 ${longSitThreshold.value} 分钟，为防爆仓及痔疮风险，建议平仓起立！`
+    : `实验反应已持续 ${longSitThreshold.value} 分钟，为防仪器过载及生理疲劳，建议终止实验！`
+})
+
+const audioLabel = computed(() => {
+  const title = bgmOn.value ? (themeStore.isStock ? '行情白噪音' : '白噪音反应流') : '已关闭'
+  return `辅助电台: ${title}`
+})
+
+const finishButtonText = computed(() => {
+  return themeStore.isStock ? '申请交割结算' : '导出实验报告'
+})
+
+const abortButtonText = computed(() => {
+  return themeStore.isStock ? '撤回委单' : '废弃反应物'
+})
+
 const toggleBgm = () => {
   bgmOn.value = !bgmOn.value
   if (bgmOn.value) {
@@ -155,7 +217,7 @@ const toggleBgm = () => {
       }
     }
     uni.showToast({
-      title: '播放白噪音 潺潺流水声 🌊',
+      title: themeStore.isStock ? '开启白噪音' : '开启音频流',
       icon: 'none'
     })
   } else {
@@ -169,14 +231,13 @@ const toggleBgm = () => {
       }
     }
     uni.showToast({
-      title: '摸鱼电台已静音',
+      title: '电台已关闭',
       icon: 'none'
     })
   }
 }
 
 const handleFinish = () => {
-  // 停止计时并跳转结算
   poopStore.stopPoop()
   uni.navigateTo({
     url: '/pages/result/index'
@@ -185,11 +246,13 @@ const handleFinish = () => {
 
 const handleAbort = () => {
   uni.showModal({
-    title: '提示',
-    content: '本次计时将作废，不保存拉屎数据，确定放弃吗？',
-    cancelText: '手滑了',
+    title: '放弃本次活动？',
+    content: themeStore.isStock 
+      ? '本次交易委托将全额撤回，不记录任何盈亏流水，确定放弃吗？'
+      : '本次实验记录将直接废弃，不计入实验日志，确定放弃吗？',
+    cancelText: '点错了',
     confirmText: '确定放弃',
-    confirmColor: '#FF6B6B',
+    confirmColor: '#E74C3C',
     success: (res) => {
       if (res.confirm) {
         poopStore.cancelPoop()
@@ -202,7 +265,11 @@ const handleAbort = () => {
 }
 
 onUnmounted(() => {
-  // 确保退出页面时，如果不为计时状态，重置一下
+  if (audioContext.value) {
+    try {
+      audioContext.value.destroy()
+    } catch (e) {}
+  }
   if (!poopStore.isPooping) {
     poopStore.cancelPoop()
   }
@@ -210,16 +277,15 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.timer-container {
+.page-container {
   min-height: 100vh;
-  background-color: #121212; // 沉浸式暗黑背景
-  color: #ffffff;
+  box-sizing: border-box;
+  background-color: var(--bg-primary);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   padding: 80rpx 40rpx;
-  box-sizing: border-box;
 }
 
 .header-section {
@@ -231,101 +297,67 @@ onUnmounted(() => {
   text-align: center;
 
   .timer-status {
-    font-size: 34rpx;
-    font-weight: bold;
-    color: $color-primary;
-    letter-spacing: 2rpx;
+    font-size: 28rpx;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 4rpx;
+    text-transform: uppercase;
   }
 
   .timer-rate {
-    font-size: 22rpx;
-    color: #888888;
+    font-size: 20rpx;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
   }
 }
 
-// 呼吸圆环
+// 环形进度条区
 .circle-timer-section {
   margin-bottom: 60rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
-  .pulsing-orb {
-    position: relative;
-    width: 320rpx;
-    height: 320rpx;
+  .timer-inner {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
 
-    .orb-center {
-      width: 250rpx;
-      height: 250rpx;
-      border-radius: 999rpx;
-      background-color: #1f1f1f;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 5;
-      border: 2rpx solid #333333;
-
-      .time-display {
-        font-size: 64rpx;
-        font-weight: bold;
-        font-family: 'Courier New', Courier, monospace;
-        color: #ffffff;
-      }
-
-      .realtime-text {
-        font-size: 22rpx;
-        color: #888888;
-        margin-top: 10rpx;
-      }
+    .time-display {
+      font-size: 72rpx;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--text-primary);
+      letter-spacing: -2rpx;
+    }
+    
+    .warning-text {
+      color: var(--accent-warn) !important;
     }
 
-    .orb-wave {
-      position: absolute;
-      width: 250rpx;
-      height: 250rpx;
-      border-radius: 999rpx;
-      border: 4rpx solid rgba(255, 140, 66, 0.4);
-      opacity: 0;
-      z-index: 1;
-      animation: breathe 3s infinite ease-in-out;
-    }
-
-    .wave-2 {
-      animation-delay: 1.5s;
-    }
-  }
-
-  // 警告样式下圆环变红
-  .warning-orb {
-    .orb-wave {
-      border-color: rgba(244, 67, 54, 0.5);
-      animation: alert-breathe 2s infinite ease-in-out;
-    }
-    .orb-center .time-display {
-      color: #f44336;
+    .timer-state-label {
+      font-size: 20rpx;
+      color: var(--text-secondary);
+      margin-top: 10rpx;
+      letter-spacing: 2rpx;
+      text-transform: uppercase;
     }
   }
 }
 
 // 收益卡片
 .earnings-card {
-  width: 100%;
-  background-color: #1a1a1a;
-  border-radius: $radius-lg;
-  padding: 40rpx;
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
-  border: 1rpx solid #2d2d2d;
   margin-bottom: 40rpx;
 
   .label {
-    font-size: 24rpx;
-    color: #aaaaaa;
+    font-size: 20rpx;
+    color: var(--text-secondary);
     letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 
   .earnings-row {
@@ -334,42 +366,36 @@ onUnmounted(() => {
     margin: 16rpx 0;
 
     .currency {
-      font-size: 40rpx;
-      color: $color-primary;
-      font-weight: bold;
+      font-size: 36rpx;
+      color: var(--accent);
+      font-weight: 800;
       margin-right: 8rpx;
     }
 
     .value {
-      font-size: 72rpx;
-      font-weight: bold;
-      color: $color-primary;
-      font-family: 'Courier New', Courier, monospace;
+      font-size: 64rpx;
+      font-weight: 800;
+      color: var(--accent);
+      font-family: var(--font-mono);
     }
   }
 
   .speed-indicator {
-    font-size: 20rpx;
-    color: #666666;
+    font-size: 18rpx;
+    color: var(--text-secondary);
   }
 }
 
 // 警告条
-.warning-banner {
+.warning-banner-flat {
   width: 100%;
-  background-color: rgba(244, 67, 54, 0.1);
-  border: 1rpx solid rgba(244, 67, 54, 0.3);
-  border-radius: $radius-md;
+  border-left: 4rpx solid var(--accent-warn);
+  background-color: rgba(231, 76, 60, 0.05);
   padding: 24rpx 32rpx;
   display: flex;
-  align-items: center;
-  gap: 20rpx;
+  flex-direction: column;
   margin-bottom: 40rpx;
   box-sizing: border-box;
-
-  .warning-icon {
-    font-size: 48rpx;
-  }
 
   .warning-content {
     display: flex;
@@ -377,46 +403,58 @@ onUnmounted(() => {
     gap: 4rpx;
 
     .warning-title {
-      font-size: 26rpx;
-      font-weight: bold;
-      color: #f44336;
+      font-size: 22rpx;
+      font-weight: 800;
+      color: var(--accent-warn);
+      letter-spacing: 2rpx;
+      text-transform: uppercase;
     }
 
     .warning-desc {
-      font-size: 22rpx;
-      color: #e57373;
+      font-size: 20rpx;
+      color: var(--text-secondary);
+      line-height: 1.5;
     }
   }
 }
 
-// BGM白噪音
-.audio-controls {
+// BGM白噪音触控条
+.audio-controls-flat {
   margin-bottom: 60rpx;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid var(--border);
+  border-top: 1rpx solid var(--border);
+  cursor: pointer;
 
-  .control-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #1e1e1e;
-    border-radius: $radius-round;
-    padding: 20rpx 40rpx;
-    gap: 16rpx;
-    border: 1rpx solid #333333;
+  &:active {
+    opacity: 0.7;
+  }
+
+  .status-indicator {
+    width: 12rpx;
+    height: 12rpx;
+    border-radius: 50%;
+    background-color: transparent;
+    border: 2rpx solid var(--text-secondary);
     transition: all 0.2s ease;
 
-    &:active {
-      background-color: #2b2b2b;
+    &.is-active {
+      background-color: var(--accent);
+      border-color: var(--accent);
     }
+  }
 
-    .icon {
-      font-size: 32rpx;
-    }
-
-    .label {
-      font-size: 24rpx;
-      color: #cccccc;
-    }
+  .btn-label {
+    font-size: 22rpx;
+    color: var(--text-secondary);
+    font-weight: 600;
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 }
 
@@ -425,66 +463,36 @@ onUnmounted(() => {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 28rpx;
+  gap: 20rpx;
 
   .finish-btn {
-    background: linear-gradient(90deg, #4CAF50 0%, #388E3C 100%);
+    background-color: var(--accent);
     color: #ffffff;
-    font-size: 32rpx;
     font-weight: bold;
     height: 96rpx;
     line-height: 96rpx;
-    border-radius: $radius-round;
+    border-radius: var(--radius-round);
     border: none;
-    box-shadow: 0 8rpx 20rpx rgba(76, 175, 80, 0.3);
+    box-shadow: 0 8rpx 20rpx rgba(0, 230, 118, 0.15);
 
     &:active {
       transform: scale(0.98);
-      box-shadow: 0 4rpx 10rpx rgba(76, 175, 80, 0.1);
     }
   }
 
   .abort-btn {
     background-color: transparent;
-    color: #aaaaaa;
+    color: var(--text-secondary);
     font-size: 28rpx;
     height: 90rpx;
     line-height: 90rpx;
-    border-radius: $radius-round;
-    border: 2rpx solid #444444;
+    border-radius: var(--radius-round);
+    border: 2rpx solid var(--border);
 
     &:active {
-      background-color: rgba(255, 255, 255, 0.05);
-      color: #ffffff;
+      background-color: var(--border);
+      color: var(--text-primary);
     }
-  }
-}
-
-@keyframes breathe {
-  0% {
-    transform: scale(1);
-    opacity: 0;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    transform: scale(1.3);
-    opacity: 0;
-  }
-}
-
-@keyframes alert-breathe {
-  0% {
-    transform: scale(1);
-    opacity: 0;
-  }
-  50% {
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1.4);
-    opacity: 0;
   }
 }
 </style>

@@ -1,92 +1,94 @@
 <template>
-  <view class="salary-settings-container" v-if="userStore.user">
-    <!-- 当前薪资信息卡片 -->
-    <view class="salary-card">
-      <view class="card-title">当前摸鱼时薪</view>
-      <view class="hourly-rate-box">
-        <text class="currency">¥</text>
-        <text class="value">{{ hourlyRate.toFixed(2) }}</text>
-        <text class="unit">/ 小时</text>
-      </view>
-      <view class="meta-row">
-        <text class="meta-label">月薪：¥{{ userStore.user.monthly_salary }}</text>
-        <text class="meta-label">月工作天数：{{ userStore.user.work_days_per_month }}天</text>
-        <text class="meta-label">日工作时间：{{ userStore.user.work_hours_per_day }}小时</text>
-      </view>
-    </view>
+  <view class="page-container" :class="themeStore.themeClass" v-if="userStore.user">
+    <PageTransition>
+      <!-- 当前薪资信息 (对账总额) -->
+      <ThemeCard customClass="salary-board-flat">
+        <view class="card-title">{{ currentHourlyLabel }}</view>
+        <view class="hourly-rate-box">
+          <text class="currency">¥</text>
+          <NumberTicker class="value" :value="hourlyRate" :precision="2" />
+          <text class="unit">/ 小时</text>
+        </view>
+        <view class="meta-row">
+          <text class="meta-label">{{ salaryMetaLabel }}：¥{{ userStore.user.monthly_salary }}</text>
+          <text class="meta-label">{{ daysMetaLabel }}：{{ userStore.user.work_days_per_month }}天</text>
+          <text class="meta-label">{{ hoursMetaLabel }}：{{ userStore.user.work_hours_per_day }}小时</text>
+        </view>
+      </ThemeCard>
 
-    <!-- 薪资变更表单 -->
-    <view class="form-card">
-      <view class="form-title">调整薪资架构</view>
+      <!-- 薪资变更表单 -->
+      <ThemeCard customClass="form-card-flat">
+        <view class="form-title">// {{ formTitle }}</view>
 
-      <view class="form-item">
-        <text class="label">新税前月薪 (元)</text>
-        <input 
-          class="input" 
-          type="number" 
-          v-model.number="salary" 
-          placeholder="请输入新的月薪"
-        />
-      </view>
-
-      <view class="row-fields">
-        <view class="form-item half">
-          <text class="label">工作天数 / 月</text>
+        <view class="form-item">
+          <text class="label">{{ monthlySalaryLabel }}</text>
           <input 
             class="input" 
             type="number" 
-            v-model.number="workDays" 
-            placeholder="默认 22"
+            v-model.number="salary" 
+            :placeholder="salaryPlaceholder"
           />
         </view>
 
-        <view class="form-item half">
-          <text class="label">工作小时 / 天</text>
-          <input 
-            class="input" 
-            type="number" 
-            v-model.number="workHours" 
-            placeholder="默认 8"
-          />
-        </view>
-      </view>
+        <view class="row-fields">
+          <view class="form-item half">
+            <text class="label">{{ daysLabel }}</text>
+            <input 
+              class="input" 
+              type="number" 
+              v-model.number="workDays" 
+              placeholder="默认 22"
+            />
+          </view>
 
-      <view class="form-item">
-        <text class="label">变更备注 (如：跳槽、升职加薪！)</text>
-        <input 
-          class="input" 
-          type="text" 
-          v-model="changeNote" 
-          placeholder="给这次变更写个备注吧"
-          maxlength="20"
-        />
-      </view>
-
-      <button class="submit-btn" :loading="saving" @tap="handleSave">
-        保存变更
-      </button>
-    </view>
-
-    <!-- 变更历史时间轴 -->
-    <view class="history-card" v-if="salaryHistory.length > 0">
-      <view class="card-title">薪资变更历史</view>
-      <view class="timeline">
-        <view 
-          class="timeline-item" 
-          v-for="(item, idx) in salaryHistory" 
-          :key="idx"
-        >
-          <view class="timeline-dot"></view>
-          <view class="timeline-content">
-            <view class="history-header">
-              <text class="history-salary">¥{{ item.monthly_salary }} /月</text>
-              <text class="history-date">{{ formatDate(item.effective_date) }}</text>
-            </view>
-            <text class="history-note" v-if="item.note">📝 {{ item.note }}</text>
+          <view class="form-item half">
+            <text class="label">{{ hoursLabel }}</text>
+            <input 
+              class="input" 
+              type="number" 
+              v-model.number="workHours" 
+              placeholder="默认 8"
+            />
           </view>
         </view>
-      </view>
-    </view>
+
+        <view class="form-item">
+          <text class="label">{{ changeNoteLabel }}</text>
+          <input 
+            class="input" 
+            type="text" 
+            v-model="changeNote" 
+            :placeholder="changeNotePlaceholder"
+            maxlength="20"
+          />
+        </view>
+
+        <button class="submit-btn" :loading="saving" @tap="handleSave">
+          {{ submitButtonText }}
+        </button>
+      </ThemeCard>
+
+      <!-- 变更历史时间轴 -->
+      <ThemeCard customClass="history-card-flat" v-if="salaryHistory.length > 0">
+        <view class="card-title">{{ historyTitle }}</view>
+        <view class="timeline">
+          <view 
+            class="timeline-item" 
+            v-for="(item, idx) in salaryHistory" 
+            :key="idx"
+          >
+            <view class="timeline-dot"></view>
+            <view class="timeline-content">
+              <view class="history-header">
+                <text class="history-salary">¥{{ item.monthly_salary }} /月</text>
+                <text class="history-date">{{ formatDate(item.effective_date) }}</text>
+              </view>
+              <text class="history-note" v-if="item.note">// {{ item.note }}</text>
+            </view>
+          </view>
+        </view>
+      </ThemeCard>
+    </PageTransition>
   </view>
 </template>
 
@@ -94,27 +96,33 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '../../stores/user'
+import { useThemeStore } from '../../stores/theme'
 import { apiCall } from '../../services/api'
 import { calculateHourlyRate } from '../../utils/salary-calculator'
 import type { SalaryRecord } from '../../utils/types'
 
+// Components
+import PageTransition from '../../components/PageTransition.vue'
+import ThemeCard from '../../components/ThemeCard.vue'
+import NumberTicker from '../../components/NumberTicker.vue'
+
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 
 const salary = ref<number | ''>('')
 const workDays = ref(22)
 const workHours = ref(8)
 const changeNote = ref('')
 const saving = ref(false)
-
 const salaryHistory = ref<SalaryRecord[]>([])
 
-onShow(async () => {
+onShow(() => {
   if (userStore.user) {
     salary.value = userStore.user.monthly_salary
     workDays.value = userStore.user.work_days_per_month
     workHours.value = userStore.user.work_hours_per_day
+    fetchSalaryHistory()
   }
-  await fetchHistory()
 })
 
 const hourlyRate = computed(() => {
@@ -126,12 +134,47 @@ const hourlyRate = computed(() => {
   )
 })
 
-const fetchHistory = async () => {
+// Dynamic labels
+const currentHourlyLabel = computed(() => {
+  return themeStore.isStock ? '实时对冲结算汇率' : '当前实验代谢率基准'
+})
+
+const salaryMetaLabel = computed(() => {
+  return themeStore.isStock ? '基本薪资' : '研发经费'
+})
+
+const daysMetaLabel = computed(() => {
+  return themeStore.isStock ? '结算周期' : '反应周期'
+})
+
+const hoursMetaLabel = computed(() => {
+  return themeStore.isStock ? '日规工时' : '日规时长'
+})
+
+const formTitle = computed(() => {
+  return themeStore.isStock ? '汇率及工时校准' : '经费及反应周期配置'
+})
+
+const monthlySalaryLabel = computed(() => {
+  return themeStore.isStock ? '月度基本协议薪酬 (元)' : '月度核定实验资助经费 (元)'
+})
+
+const salaryPlaceholder = computed(() => {
+  return themeStore.isStock ? '协议月薪额' : '实验总经费/月'
+})
+
+const daysLabel = computed(() => themeStore.isStock ? '月法定结算天数' : '月度实验天数')
+const hoursLabel = computed(() => themeStore.isStock ? '日协议工时数' : '日规定实验工时')
+const changeNoteLabel = computed(() => themeStore.isStock ? '汇率变更备忘录 (说明)' : '变更课题备忘录')
+const changeNotePlaceholder = computed(() => themeStore.isStock ? '例如：绩效上调、跳槽改约' : '例如：课题变更、设备升级')
+const submitButtonText = computed(() => themeStore.isStock ? '应用并重新开盘' : '应用变更并校准')
+const historyTitle = computed(() => themeStore.isStock ? '汇率校准历史日志' : '周期与经费变更底账')
+
+const fetchSalaryHistory = async () => {
   try {
-    const res = await apiCall<{ history: SalaryRecord[] }>('user-center', 'getSalaryHistory')
+    const res = await apiCall<{ history: SalaryRecord[] }>('user-manager', 'getSalaryHistory')
     if (res.code === 0 && res.data) {
-      // 倒序展示最新变更
-      salaryHistory.value = [...res.data.history].sort((a, b) => b.effective_date - a.effective_date)
+      salaryHistory.value = res.data.history
     }
   } catch (e) {
     console.error(e)
@@ -139,16 +182,16 @@ const fetchHistory = async () => {
 }
 
 const handleSave = async () => {
-  if (salary.value === '' || salary.value < 0) {
-    uni.showToast({ title: '请输入正确的月薪', icon: 'none' })
+  if (!salary.value || salary.value <= 0) {
+    uni.showToast({ title: '请输入有效的金额', icon: 'none' })
     return
   }
-  if (workDays.value < 1 || workDays.value > 31) {
-    uni.showToast({ title: '月工作天数范围1-31', icon: 'none' })
+  if (!workDays.value || workDays.value <= 0 || workDays.value > 31) {
+    uni.showToast({ title: '请输入合理的天数', icon: 'none' })
     return
   }
-  if (workHours.value < 1 || workHours.value > 24) {
-    uni.showToast({ title: '日工作小时范围1-24', icon: 'none' })
+  if (!workHours.value || workHours.value <= 0 || workHours.value > 24) {
+    uni.showToast({ title: '请输入合理的小时数', icon: 'none' })
     return
   }
 
@@ -162,72 +205,70 @@ const handleSave = async () => {
   saving.value = false
 
   if (success) {
-    uni.showToast({ title: '薪资调整成功！', icon: 'success' })
+    uni.showToast({ title: '参数已校准', icon: 'none' })
     changeNote.value = ''
-    await fetchHistory()
+    fetchSalaryHistory()
   } else {
-    uni.showToast({ title: userStore.errorMsg || '调整失败', icon: 'none' })
+    uni.showToast({ title: userStore.errorMsg || '更新失败', icon: 'none' })
   }
 }
 
-const formatDate = (timestamp: number): string => {
-  const d = new Date(timestamp)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+const formatDate = (timeMs: number): string => {
+  const d = new Date(timeMs)
+  const pad = (num: number) => String(num).padStart(2, '0')
+  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`
 }
 </script>
 
 <style lang="scss" scoped>
-.salary-settings-container {
-  padding: 32rpx;
+.page-container {
+  padding: 40rpx;
   min-height: 100vh;
-  background-color: $bg-primary;
+  box-sizing: border-box;
+  background-color: var(--bg-primary);
   display: flex;
   flex-direction: column;
-  gap: 32rpx;
-  box-sizing: border-box;
+  gap: 40rpx;
 }
 
-// 薪水卡
-.salary-card {
-  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
-  border-radius: $radius-lg;
-  padding: 40rpx;
-  box-shadow: $shadow-md;
-  color: #ffffff;
+// 头部扁平对账总额板
+.salary-board-flat {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 20rpx;
 
   .card-title {
-    font-size: 24rpx;
-    opacity: 0.8;
+    font-size: 20rpx;
+    font-weight: 800;
+    color: var(--text-secondary);
     letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 
   .hourly-rate-box {
     display: flex;
     align-items: baseline;
-    margin: 24rpx 0;
+    justify-content: center;
+    padding: 10rpx 0;
 
     .currency {
-      font-size: 40rpx;
-      font-weight: bold;
+      font-size: 36rpx;
+      font-weight: 800;
+      color: var(--accent);
       margin-right: 8rpx;
     }
 
     .value {
-      font-size: 80rpx;
+      font-size: 64rpx;
       font-weight: 800;
-      font-family: 'Courier New', Courier, monospace;
+      font-family: var(--font-mono);
+      color: var(--accent);
     }
 
     .unit {
-      font-size: 24rpx;
+      font-size: 20rpx;
       margin-left: 8rpx;
-      opacity: 0.8;
+      color: var(--text-secondary);
     }
   }
 
@@ -235,32 +276,27 @@ const formatDate = (timestamp: number): string => {
     display: flex;
     justify-content: space-between;
     width: 100%;
-    font-size: 20rpx;
-    opacity: 0.8;
-    border-top: 2rpx solid rgba(255, 255, 255, 0.2);
+    font-size: 18rpx;
+    border-top: 1rpx solid var(--border);
     padding-top: 20rpx;
     text-align: center;
+    color: var(--text-secondary);
   }
 }
 
 // 表单卡
-.form-card {
-  background-color: $bg-card;
-  border-radius: $radius-lg;
-  padding: 40rpx;
-  box-shadow: $shadow-sm;
-  border: 1rpx solid #ffe8d8;
+.form-card-flat {
   display: flex;
   flex-direction: column;
+  border: 1rpx solid var(--border);
 
   .form-title {
-    font-size: 28rpx;
-    font-weight: bold;
-    color: $text-secondary;
+    font-size: 24rpx;
+    font-weight: 800;
+    color: var(--text-primary);
     margin-bottom: 32rpx;
-    border-left: 6rpx solid $color-primary;
-    padding-left: 16rpx;
-    line-height: 1;
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 }
 
@@ -270,25 +306,26 @@ const formatDate = (timestamp: number): string => {
   margin-bottom: 28rpx;
 
   .label {
-    font-size: 24rpx;
-    color: $text-secondary;
+    font-size: 22rpx;
+    color: var(--text-secondary);
     margin-bottom: 12rpx;
-    font-weight: 600;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1rpx;
   }
 
   .input {
-    background-color: #fafafa;
-    border: 1rpx solid #e0e0e0;
-    border-radius: $radius-sm;
+    background-color: var(--bg-primary);
+    border: 1rpx solid var(--border);
     height: 80rpx;
     padding: 0 20rpx;
-    font-size: 26rpx;
-    color: $text-primary;
+    font-size: 24rpx;
+    color: var(--text-primary);
     box-sizing: border-box;
+    font-family: var(--font-mono);
 
     &:focus {
-      border-color: $color-primary;
-      background-color: #ffffff;
+      border-color: var(--accent);
     }
   }
 }
@@ -304,40 +341,35 @@ const formatDate = (timestamp: number): string => {
 }
 
 .submit-btn {
-  background: linear-gradient(90deg, $color-primary 0%, $color-primary-dark 100%);
-  color: $text-white;
-  font-size: 30rpx;
-  font-weight: bold;
+  background-color: var(--accent);
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: 800;
   height: 90rpx;
   line-height: 90rpx;
-  border-radius: $radius-round;
+  border-radius: var(--radius-sm, 4rpx);
   border: none;
-  box-shadow: 0 8rpx 20rpx rgba(255, 140, 66, 0.3);
+  letter-spacing: 2rpx;
+  text-transform: uppercase;
   margin-top: 20rpx;
 
   &:active {
-    transform: scale(0.98);
+    opacity: 0.9;
   }
 }
 
 // 历史列表
-.history-card {
-  background-color: $bg-card;
-  border-radius: $radius-lg;
-  padding: 40rpx;
-  box-shadow: $shadow-sm;
-  border: 1rpx solid #ffe8d8;
+.history-card-flat {
   display: flex;
   flex-direction: column;
 
   .card-title {
-    font-size: 28rpx;
-    font-weight: bold;
-    color: $text-secondary;
+    font-size: 20rpx;
+    font-weight: 800;
+    color: var(--text-secondary);
     margin-bottom: 32rpx;
-    border-left: 6rpx solid $color-primary;
-    padding-left: 16rpx;
-    line-height: 1;
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 }
 
@@ -350,7 +382,7 @@ const formatDate = (timestamp: number): string => {
     position: relative;
     padding-left: 40rpx;
     padding-bottom: 32rpx;
-    border-left: 2rpx solid #ffd8c0;
+    border-left: 1rpx solid var(--border);
 
     &:last-child {
       border-left: none;
@@ -359,14 +391,12 @@ const formatDate = (timestamp: number): string => {
 
     .timeline-dot {
       position: absolute;
-      left: -11rpx;
-      top: 10rpx;
-      width: 20rpx;
-      height: 20rpx;
-      border-radius: 999rpx;
-      background-color: $color-primary;
-      border: 4rpx solid #ffffff;
-      box-shadow: 0 0 10rpx rgba(255, 140, 66, 0.4);
+      left: -9rpx;
+      top: 12rpx;
+      width: 16rpx;
+      height: 16rpx;
+      border-radius: 50%;
+      background-color: var(--accent);
     }
 
     .timeline-content {
@@ -380,24 +410,23 @@ const formatDate = (timestamp: number): string => {
         align-items: center;
 
         .history-salary {
-          font-size: 28rpx;
-          font-weight: bold;
-          color: $text-primary;
+          font-size: 24rpx;
+          font-weight: 800;
+          color: var(--text-primary);
+          font-family: var(--font-mono);
         }
 
         .history-date {
-          font-size: 20rpx;
-          color: $text-hint;
+          font-size: 18rpx;
+          color: var(--text-secondary);
+          font-family: var(--font-mono);
         }
       }
 
       .history-note {
-        font-size: 22rpx;
-        color: $text-secondary;
-        background-color: #fff9f5;
-        border-radius: 6rpx;
-        padding: 8rpx 16rpx;
-        align-self: flex-start;
+        font-size: 20rpx;
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
       }
     }
   }

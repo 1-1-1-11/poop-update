@@ -1,101 +1,102 @@
 <template>
-  <view class="result-container">
-    <!-- 顶部状态栏替代 -->
-    <view class="nav-header">
-      <text class="nav-title">如厕小结</text>
-    </view>
-
-    <!-- 结算看板 -->
-    <view class="receipt-card" :class="feedbackTheme">
-      <view class="feedback-banner">
-        <text class="feedback-emoji">{{ themeEmoji }}</text>
-        <text class="feedback-msg">{{ feedbackMessage }}</text>
+  <view class="page-container" :class="themeStore.themeClass">
+    <PageTransition>
+      <!-- 顶部标题 -->
+      <view class="nav-header">
+        <text class="nav-title">{{ themeStore.t('resultTitle') }}</text>
       </view>
 
-      <view class="divider"></view>
+      <!-- 结算对账单 (扁平总账板) -->
+      <ThemeCard :customClass="`receipt-board-flat ${feedbackTheme}`">
+        <view class="feedback-banner-flat">
+          <text class="feedback-msg">// STATUS: {{ feedbackMessage }}</text>
+        </view>
 
-      <!-- 核心统计项 -->
-      <view class="stats-row">
-        <view class="stat-item">
-          <text class="val">{{ formatDuration(poopStore.elapsedSeconds) }}</text>
-          <text class="label">本次时长</text>
+        <view class="divider"></view>
+
+        <!-- 核心统计项 -->
+        <view class="stats-row">
+          <view class="stat-item">
+            <text class="val">{{ formatDuration(poopStore.elapsedSeconds) }}</text>
+            <text class="label">{{ sessionDurationLabel }}</text>
+          </view>
+          <view class="stat-item border-left">
+            <view class="val earnings-val">
+              <NumberTicker :value="poopStore.realtimeEarnings" prefix="¥" :precision="4" />
+            </view>
+            <text class="label">{{ themeStore.t('earnings') }}</text>
+          </view>
+          <view class="stat-item border-left">
+            <view class="val xp-val">
+              <NumberTicker :value="xpEarned" prefix="+" :precision="0" />
+            </view>
+            <text class="label">获得经验</text>
+          </view>
         </view>
-        <view class="stat-item border-left">
-          <text class="val earnings-val">¥{{ poopStore.realtimeEarnings.toFixed(2) }}</text>
-          <text class="label">带薪收益</text>
+
+        <view class="divider"></view>
+
+        <!-- 商品换算 -->
+        <view class="equivalent-section-flat" v-if="comparison">
+          <view class="eq-content">
+            <text class="eq-title">产出成果换算：</text>
+            <text class="eq-desc">{{ equivalentText }}</text>
+          </view>
         </view>
-        <view class="stat-item border-left">
-          <text class="val xp-val">+{{ xpEarned }}</text>
-          <text class="label">获得经验</text>
+      </ThemeCard>
+
+      <!-- 评价手记 (表单扁平化) -->
+      <ThemeCard customClass="feedback-form-flat">
+        <view class="form-title">{{ themeStore.t('comfortLevel') }}</view>
+
+        <!-- 星级选择器 -->
+        <view class="form-item">
+          <text class="form-label">{{ comfortQuestion }}</text>
+          <view class="stars-row">
+            <text 
+              v-for="star in 5" 
+              :key="star" 
+              class="star-icon" 
+              :class="{ 'star-active': star <= comfortLevel }"
+              @tap="comfortLevel = star"
+            >
+              ★
+            </text>
+          </view>
+        </view>
+
+        <!-- 备注手记 -->
+        <view class="form-item">
+          <text class="form-label">{{ noteLabel }}</text>
+          <textarea 
+            class="notes-textarea" 
+            v-model="note" 
+            :placeholder="notePlaceholder"
+            maxlength="200"
+          />
+          <text class="char-count">{{ note.length }}/200</text>
+        </view>
+
+        <button class="save-btn" :loading="saving" @tap="handleSave">
+          {{ themeStore.t('saveButton') }}
+        </button>
+      </ThemeCard>
+
+      <!-- 升职加薪庆祝弹窗 -->
+      <view class="levelup-modal" v-if="showLevelUp">
+        <view class="modal-content">
+          <view class="ribbon">{{ levelUpRibbon }}</view>
+          <text class="congrats-text">{{ levelUpCongrats }}</text>
+          <view class="title-compare">
+            <text class="old-title">旧级: {{ userStore.user?.current_title }}</text>
+            <text class="arrow">➔</text>
+            <text class="new-title">{{ newTitle }}</text>
+          </view>
+          <text class="level-desc">{{ levelUpDesc }}</text>
+          <button class="modal-btn" @tap="closeLevelUpModal">{{ levelUpButtonText }}</button>
         </view>
       </view>
-
-      <view class="divider"></view>
-
-      <!-- 商品换算 -->
-      <view class="equivalent-section" v-if="comparison">
-        <text class="eq-icon">{{ comparisonIcon }}</text>
-        <view class="eq-content">
-          <text class="eq-title">摸鱼成果换算：</text>
-          <text class="eq-desc">
-            本次如厕赚取的薪资，相当于买到了 <text class="highlight">{{ comparison.quantity_affordable }}</text> 份 <text class="highlight">{{ comparison.item_name }}</text>！
-          </text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 评价手记卡片 -->
-    <view class="feedback-form-card">
-      <view class="form-title">如厕手记</view>
-
-      <!-- 星级选择器 -->
-      <view class="form-item">
-        <text class="form-label">马桶舒适度评分</text>
-        <view class="stars-row">
-          <text 
-            v-for="star in 5" 
-            :key="star" 
-            class="star-icon" 
-            :class="{ 'star-active': star <= comfortLevel }"
-            @tap="comfortLevel = star"
-          >
-            ★
-          </text>
-        </view>
-      </view>
-
-      <!-- 备注手记 -->
-      <view class="form-item">
-        <text class="form-label">拉屎吐槽/灵感记录</text>
-        <textarea 
-          class="notes-textarea" 
-          v-model="note" 
-          placeholder="写点什么...比如：今天马桶圈挺暖和，或是想出了个绝妙Bug解法。"
-          maxlength="200"
-        />
-        <text class="char-count">{{ note.length }}/200</text>
-      </view>
-
-      <button class="save-btn" :loading="saving" @tap="handleSave">
-        保存并返回
-      </button>
-    </view>
-
-    <!-- 升职加薪庆祝弹窗 -->
-    <view class="levelup-modal" v-if="showLevelUp">
-      <view class="modal-content">
-        <view class="ribbon">🎉 恭喜晋升 🎉</view>
-        <text class="celebration-emoji">👑</text>
-        <text class="congrats-text">老板表示大受震撼！</text>
-        <view class="title-compare">
-          <text class="old-title">旧职级：{{ userStore.user?.current_title }}</text>
-          <text class="arrow">➔</text>
-          <text class="new-title">{{ newTitle }}</text>
-        </view>
-        <text class="level-desc">您的带薪摸鱼水平已达到了新的巅峰，解锁更多特权！</text>
-        <button class="modal-btn" @tap="closeLevelUpModal">谢主隆恩</button>
-      </view>
-    </view>
+    </PageTransition>
   </view>
 </template>
 
@@ -103,11 +104,18 @@
 import { ref, computed } from 'vue'
 import { useUserStore } from '../../stores/user'
 import { usePoopStore } from '../../stores/poop'
+import { useThemeStore } from '../../stores/theme'
 import { getFeedbackType, getFeedbackMessage, formatDuration, calculateSessionXP } from '../../utils/salary-calculator'
 import { getBestComparison } from '../../utils/purchase-items'
 
+// Components
+import PageTransition from '../../components/PageTransition.vue'
+import ThemeCard from '../../components/ThemeCard.vue'
+import NumberTicker from '../../components/NumberTicker.vue'
+
 const userStore = useUserStore()
 const poopStore = usePoopStore()
+const themeStore = useThemeStore()
 
 const comfortLevel = ref(3)
 const note = ref('')
@@ -120,7 +128,7 @@ const feedbackType = computed(() => {
   return getFeedbackType(poopStore.elapsedSeconds)
 })
 
-// 经验值估算 (为了展示)
+// 经验值估算
 const xpEarned = computed(() => {
   return calculateSessionXP(poopStore.elapsedSeconds, comfortLevel.value as any, userStore.user?.streak_days ? userStore.user.streak_days > 0 : false)
 })
@@ -134,14 +142,6 @@ const feedbackTheme = computed(() => {
   }
 })
 
-const themeEmoji = computed(() => {
-  switch (feedbackType.value) {
-    case 'praise': return '⚡'
-    case 'encourage': return '🍃'
-    default: return '✅'
-  }
-})
-
 const feedbackMessage = computed(() => {
   return getFeedbackMessage(feedbackType.value)
 })
@@ -151,27 +151,50 @@ const comparison = computed(() => {
   return getBestComparison(poopStore.realtimeEarnings)
 })
 
-const comparisonIcon = computed(() => {
-  if (!comparison.value) return '🎁'
-  const iconMap: { [k: string]: string } = {
-    'coffee': '☕',
-    'ice-cream': '🍦',
-    'bubble-tea': '🥤',
-    'pancake': '🥞',
-    'bao': '🥟',
-    'metro': '🚇',
-    'cola': '🥤',
-    'water': '💧',
-    'noodle': '🍜',
-    'vip': '🎫',
-    'burger': '🍔',
-    'movie': '🎬',
-    'takeout': '🥡',
-    'sneaker': '👟',
-    'game': '🎮',
-    'phone': '📱'
-  }
-  return iconMap[comparison.value.icon] || '🎁'
+// Dynamic labels
+const sessionDurationLabel = computed(() => {
+  return themeStore.isStock ? '持仓周期' : '反应时长'
+})
+
+const equivalentText = computed(() => {
+  if (!comparison.value) return ''
+  return themeStore.isStock
+    ? `本次实盘套利赚取的利润，相当于买入了 ${comparison.value.quantity_affordable} 份 ${comparison.value.item_name}！`
+    : `本次反应合成赚取的产出，相当于置备了 ${comparison.value.quantity_affordable} 份 ${comparison.value.item_name}！`
+})
+
+const comfortQuestion = computed(() => {
+  return themeStore.isStock ? '交易操作流畅度评分' : '实验室纯净度评估'
+})
+
+const noteLabel = computed(() => {
+  return themeStore.isStock ? '交易复盘/灵感记录' : '实验结论/灵感随笔'
+})
+
+const notePlaceholder = computed(() => {
+  return themeStore.isStock
+    ? '写点复盘心得...比如：本次平仓时机极为敏锐，或者想到了优化核心Bug的方法。'
+    : '记录实验现象...比如：本反应热效率极高，或者突然破解了系统架构难关。'
+})
+
+const levelUpRibbon = computed(() => {
+  return themeStore.isStock ? '恭喜晋升席位' : '恭喜晋升职称'
+})
+
+const levelUpCongrats = computed(() => {
+  return themeStore.isStock 
+    ? '交易席位升级，市场表示震撼！' 
+    : '科研职称升级，学界表示震撼！'
+})
+
+const levelUpDesc = computed(() => {
+  return themeStore.isStock
+    ? '您的套利水平已达到了新的巅峰，解锁更多高级委托特权！'
+    : '您的科研成果已取得了突破性进展，解锁更多国家重点实验室特权！'
+})
+
+const levelUpButtonText = computed(() => {
+  return themeStore.isStock ? '确认交割' : '存入档案'
 })
 
 const handleSave = async () => {
@@ -183,10 +206,9 @@ const handleSave = async () => {
     if (res.data.leveled_up) {
       newTitle.value = res.data.current_title
       showLevelUp.value = true
-      // 触发出升职提示音或振动
       uni.vibrateLong({})
     } else {
-      uni.showToast({ title: '记录已保存', icon: 'success' })
+      uni.showToast({ title: '记录已保存', icon: 'none' })
       setTimeout(() => {
         uni.switchTab({ url: '/pages/index/index' })
       }, 1200)
@@ -208,14 +230,14 @@ const closeLevelUpModal = () => {
 </script>
 
 <style lang="scss" scoped>
-.result-container {
+.page-container {
   min-height: 100vh;
-  background-color: $bg-primary;
+  background-color: var(--bg-primary);
   padding: 40rpx 32rpx;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 32rpx;
+  gap: 40rpx;
 }
 
 .nav-header {
@@ -225,42 +247,36 @@ const closeLevelUpModal = () => {
   justify-content: center;
 
   .nav-title {
-    font-size: 34rpx;
-    font-weight: bold;
-    color: $text-primary;
+    font-size: 28rpx;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 }
 
 // 结算卡片主题样式
-.receipt-card {
-  background-color: $bg-card;
-  border-radius: $radius-lg;
-  padding: 40rpx;
-  box-shadow: $shadow-md;
-  border: 2rpx solid #ffd8c0;
+.receipt-board-flat {
   display: flex;
   flex-direction: column;
   gap: 28rpx;
+  border: 1rpx solid var(--border);
 
-  .feedback-banner {
+  .feedback-banner-flat {
     display: flex;
     align-items: center;
-    gap: 16rpx;
-
-    .feedback-emoji {
-      font-size: 48rpx;
-    }
 
     .feedback-msg {
-      font-size: 30rpx;
-      font-weight: bold;
-      color: $text-primary;
+      font-size: 24rpx;
+      font-weight: 800;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
     }
   }
 
   .divider {
-    height: 2rpx;
-    background-color: #f3f3f3;
+    height: 1rpx;
+    background-color: var(--border);
   }
 
   .stats-row {
@@ -275,44 +291,39 @@ const closeLevelUpModal = () => {
       gap: 8rpx;
 
       .val {
-        font-size: 36rpx;
+        font-size: 30rpx;
         font-weight: bold;
-        color: $text-primary;
+        color: var(--text-primary);
       }
 
       .earnings-val {
-        color: $color-primary;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 44rpx;
+        color: var(--accent);
+        font-family: var(--font-mono);
+        font-size: 34rpx;
       }
 
       .xp-val {
-        color: $color-success;
+        color: var(--accent-info);
+        font-family: var(--font-mono);
       }
 
       .label {
-        font-size: 22rpx;
-        color: $text-hint;
+        font-size: 20rpx;
+        color: var(--text-secondary);
       }
     }
 
     .border-left {
-      border-left: 2rpx solid #eeeeee;
+      border-left: 1rpx solid var(--border);
     }
   }
 
-  .equivalent-section {
+  .equivalent-section-flat {
     display: flex;
-    background-color: #fff9f4;
-    border-radius: $radius-sm;
+    background-color: var(--bg-primary);
     padding: 20rpx;
-    gap: 16rpx;
     align-items: center;
-    border: 1rpx solid #fff0e2;
-
-    .eq-icon {
-      font-size: 48rpx;
-    }
+    border: 1rpx solid var(--border);
 
     .eq-content {
       display: flex;
@@ -321,19 +332,15 @@ const closeLevelUpModal = () => {
       flex: 1;
 
       .eq-title {
-        font-size: 24rpx;
-        font-weight: bold;
-        color: $text-secondary;
+        font-size: 22rpx;
+        font-weight: 800;
+        color: var(--text-primary);
       }
 
       .eq-desc {
-        font-size: 22rpx;
-        color: $text-secondary;
-
-        .highlight {
-          color: $color-primary-dark;
-          font-weight: bold;
-        }
+        font-size: 20rpx;
+        color: var(--text-secondary);
+        line-height: 1.4;
       }
     }
   }
@@ -341,37 +348,28 @@ const closeLevelUpModal = () => {
 
 // 主题变体样式
 .theme-praise {
-  border-color: #ffd700;
-  background: linear-gradient(180deg, #ffffff 0%, #fffdf0 100%);
-  .feedback-msg { color: #ccac00; }
-  .earnings-val { color: #d4af37; }
+  border-color: var(--accent);
+  .feedback-msg { color: var(--accent); }
 }
 
 .theme-encourage {
-  border-color: #ffb3b3;
-  background: linear-gradient(180deg, #ffffff 0%, #fff5f5 100%);
-  .feedback-msg { color: #e63946; }
-  .earnings-val { color: #e63946; }
+  border-color: var(--accent-warn);
+  .feedback-msg { color: var(--accent-warn); }
 }
 
 // 手记表单
-.feedback-form-card {
-  background-color: $bg-card;
-  border-radius: $radius-lg;
-  padding: 40rpx;
-  box-shadow: $shadow-sm;
-  border: 1rpx solid #ffe8d8;
+.feedback-form-flat {
   display: flex;
   flex-direction: column;
   gap: 32rpx;
+  border: 1rpx solid var(--border);
 
   .form-title {
-    font-size: 28rpx;
-    font-weight: bold;
-    color: $text-secondary;
-    border-left: 6rpx solid $color-primary;
-    padding-left: 16rpx;
-    line-height: 1;
+    font-size: 24rpx;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 
   .form-item {
@@ -380,8 +378,8 @@ const closeLevelUpModal = () => {
     gap: 16rpx;
 
     .form-label {
-      font-size: 24rpx;
-      color: $text-secondary;
+      font-size: 22rpx;
+      color: var(--text-secondary);
       font-weight: 600;
     }
 
@@ -390,52 +388,52 @@ const closeLevelUpModal = () => {
       gap: 16rpx;
 
       .star-icon {
-        font-size: 56rpx;
-        color: #e0e0e0;
+        font-size: 48rpx;
+        color: var(--border);
         cursor: pointer;
         line-height: 1;
-        transition: color 0.15s ease;
       }
 
       .star-active {
-        color: #ffc107;
+        color: var(--accent);
       }
     }
 
     .notes-textarea {
       width: 100%;
       height: 160rpx;
-      background-color: #fafafa;
-      border: 1rpx solid #e0e0e0;
-      border-radius: $radius-sm;
+      background-color: var(--bg-primary);
+      border: 1rpx solid var(--border);
       padding: 16rpx;
-      font-size: 26rpx;
-      color: $text-primary;
+      font-size: 24rpx;
+      color: var(--text-primary);
       box-sizing: border-box;
     }
 
     .char-count {
-      font-size: 20rpx;
-      color: $text-hint;
+      font-size: 18rpx;
+      color: var(--text-secondary);
       text-align: right;
       margin-top: -8rpx;
+      font-family: var(--font-mono);
     }
   }
 
   .save-btn {
-    background: linear-gradient(90deg, $color-primary 0%, $color-primary-dark 100%);
-    color: $text-white;
-    font-size: 32rpx;
-    font-weight: bold;
-    height: 96rpx;
-    line-height: 96rpx;
-    border-radius: $radius-round;
+    background-color: var(--accent);
+    color: #ffffff;
+    font-size: 28rpx;
+    font-weight: 800;
+    height: 90rpx;
+    line-height: 90rpx;
+    border-radius: var(--radius-sm, 4rpx);
     border: none;
-    box-shadow: 0 8rpx 20rpx rgba(255, 140, 66, 0.4);
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
     margin-top: 16rpx;
 
     &:active {
-      transform: scale(0.98);
+      opacity: 0.9;
     }
   }
 }
@@ -447,49 +445,40 @@ const closeLevelUpModal = () => {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.6);
-  z-index: 100;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 999;
   display: flex;
   justify-content: center;
   align-items: center;
-  animation: fadeIn 0.3s ease;
 
   .modal-content {
     width: 80%;
-    background: linear-gradient(135deg, #ffffff 0%, #fffcf0 100%);
-    border-radius: $radius-lg;
+    background-color: var(--bg-card);
+    border: 2rpx solid var(--border);
     padding: 60rpx 40rpx;
-    box-shadow: 0 20rpx 50rpx rgba(0, 0, 0, 0.3);
-    border: 4rpx solid #ffd700;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
     position: relative;
-    animation: scaleUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-sizing: border-box;
 
     .ribbon {
-      background-color: #ffd700;
-      color: #333333;
-      font-weight: bold;
-      font-size: 34rpx;
-      padding: 10rpx 40rpx;
-      border-radius: $radius-round;
+      background-color: var(--accent);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 26rpx;
+      padding: 8rpx 32rpx;
       position: absolute;
-      top: -30rpx;
-      box-shadow: 0 4rpx 10rpx rgba(0,0,0,0.15);
-    }
-
-    .celebration-emoji {
-      font-size: 120rpx;
-      margin-top: 20rpx;
-      animation: spin 3s infinite linear;
+      top: -26rpx;
+      letter-spacing: 2rpx;
+      text-transform: uppercase;
     }
 
     .congrats-text {
-      font-size: 32rpx;
-      font-weight: bold;
-      color: #b8860b;
+      font-size: 28rpx;
+      font-weight: 800;
+      color: var(--accent);
       margin-top: 24rpx;
     }
 
@@ -498,58 +487,45 @@ const closeLevelUpModal = () => {
       align-items: center;
       gap: 16rpx;
       margin: 28rpx 0;
-      background-color: #fff9e0;
+      background-color: var(--bg-primary);
+      border: 1rpx solid var(--border);
       padding: 12rpx 24rpx;
-      border-radius: $radius-sm;
 
       .old-title {
-        font-size: 24rpx;
-        color: #888888;
+        font-size: 22rpx;
+        color: var(--text-secondary);
       }
       .arrow {
-        color: #b8860b;
+        color: var(--accent-warn);
         font-weight: bold;
       }
       .new-title {
-        font-size: 28rpx;
+        font-size: 24rpx;
         font-weight: 800;
-        color: $color-primary-dark;
+        color: var(--accent);
       }
     }
 
     .level-desc {
-      font-size: 22rpx;
-      color: #666666;
+      font-size: 20rpx;
+      color: var(--text-secondary);
       margin-bottom: 40rpx;
+      line-height: 1.5;
     }
 
     .modal-btn {
       width: 80%;
-      background: linear-gradient(90deg, #ffc107 0%, #ffa000 100%);
-      color: #333333;
-      font-weight: bold;
-      font-size: 28rpx;
+      background-color: var(--accent);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 26rpx;
       height: 80rpx;
       line-height: 80rpx;
-      border-radius: $radius-round;
+      border-radius: var(--radius-sm, 4rpx);
       border: none;
-      box-shadow: 0 6rpx 16rpx rgba(255, 193, 7, 0.4);
+      letter-spacing: 2rpx;
+      text-transform: uppercase;
     }
   }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes scaleUp {
-  from { transform: scale(0.8); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-@keyframes spin {
-  0% { transform: rotate(0); }
-  100% { transform: rotate(360deg); }
 }
 </style>

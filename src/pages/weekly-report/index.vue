@@ -1,94 +1,87 @@
 <template>
-  <view class="report-container">
-    <!-- 周报选择器 -->
-    <view class="picker-card" v-if="reports.length > 0">
-      <view class="picker-label">查看周报历史：</view>
-      <picker :range="weekOptions" :value="selectedReportIndex" @change="onReportChange">
-        <view class="picker-value-box">
-          <text class="val">{{ weekOptions[selectedReportIndex] }}</text>
-          <text class="arrow">▼</text>
-        </view>
-      </picker>
-    </view>
+  <view class="page-container" :class="themeStore.themeClass">
+    <PageTransition>
+      <!-- 周报选择器 (扁平下拉) -->
+      <ThemeCard customClass="picker-card-flat" v-if="reports.length > 0">
+        <view class="picker-label">历史账单流水：</view>
+        <picker :range="weekOptions" :value="selectedReportIndex" @change="onReportChange">
+          <view class="picker-value-box">
+            <text class="val">{{ weekOptions[selectedReportIndex] }}</text>
+            <text class="arrow">▼</text>
+          </view>
+        </picker>
+      </ThemeCard>
 
-    <!-- 当前选定周报内容 -->
-    <view class="report-card" v-if="activeReport">
-      <view class="card-header">
-        <text class="header-icon">📊</text>
-        <view class="header-meta">
-          <text class="title">带薪摸鱼周报</text>
-          <text class="date-range">{{ formatDateRange(activeReport.week_start, activeReport.week_end) }}</text>
+      <!-- 当前选定周报内容 (扁平版面) -->
+      <view class="report-layout-flat" v-if="activeReport">
+        <view class="report-header">
+          <view class="header-meta">
+            <text class="title">{{ reportTitle }}</text>
+            <text class="date-range">{{ formatDateRange(activeReport.week_start, activeReport.week_end) }}</text>
+          </view>
         </view>
-      </view>
 
-      <view class="divider"></view>
+        <!-- 核心汇总数据 -->
+        <view class="metrics-grid-flat">
+          <view class="metric-item-flat">
+            <text class="lbl">累计{{ themeStore.t('earnings') }}</text>
+            <view class="val salary-text">
+              <NumberTicker :value="activeReport.total_earnings" prefix="¥" :precision="2" />
+            </view>
+          </view>
+          <view class="metric-item-flat">
+            <text class="lbl">累计{{ themeStore.t('poopDuration') }}</text>
+            <text class="val">{{ formatMinutes(activeReport.total_duration_seconds) }}</text>
+          </view>
+          <view class="metric-item-flat">
+            <text class="lbl">累计{{ themeStore.t('todayCount') }}</text>
+            <view class="val">
+              <NumberTicker :value="activeReport.total_sessions" suffix="次" :precision="0" />
+            </view>
+          </view>
+          <view class="metric-item-flat">
+            <text class="lbl">平均{{ themeStore.t('comfortLevel') }}</text>
+            <text class="val">★{{ activeReport.avg_comfort.toFixed(1) }}</text>
+          </view>
+        </view>
 
-      <!-- 核心汇总数据 -->
-      <view class="metrics-grid">
-        <view class="metric-item">
-          <text class="lbl">带薪总收益</text>
-          <text class="val salary-text">¥{{ activeReport.total_earnings.toFixed(2) }}</text>
-        </view>
-        <view class="metric-item">
-          <text class="lbl">累计蹲厕时间</text>
-          <text class="val">{{ formatMinutes(activeReport.total_duration_seconds) }}</text>
-        </view>
-        <view class="metric-item">
-          <text class="lbl">如厕次数</text>
-          <text class="val">{{ activeReport.total_sessions }} 次</text>
-        </view>
-        <view class="metric-item">
-          <text class="lbl">平均舒适度</text>
-          <text class="val">★{{ activeReport.avg_comfort.toFixed(1) }}</text>
-        </view>
-      </view>
-
-      <view class="divider"></view>
-
-      <!-- 商品换算 -->
-      <view class="comparisons-section" v-if="activeReport.purchasing_comparisons.length > 0">
-        <view class="section-title">带薪采购力换算</view>
-        <view class="comparisons-grid">
-          <view 
-            class="comparison-item" 
-            v-for="(item, idx) in activeReport.purchasing_comparisons" 
-            :key="idx"
-          >
-            <text class="comp-icon">{{ getComparisonIcon(item.icon) }}</text>
-            <view class="comp-meta">
+        <!-- 商品换算 -->
+        <view class="comparisons-section-flat" v-if="activeReport.purchasing_comparisons.length > 0">
+          <view class="section-title-flat">{{ purchasingTitle }}</view>
+          <view class="comparisons-list-flat">
+            <view 
+              class="comparison-row-flat" 
+              v-for="(item, idx) in activeReport.purchasing_comparisons" 
+              :key="idx"
+            >
               <text class="comp-name">{{ item.item_name }}</text>
               <text class="comp-qty">可买 <text class="highlight">{{ item.quantity_affordable }}</text> 份</text>
             </view>
           </view>
         </view>
-      </view>
 
-      <view class="divider"></view>
+        <!-- 团队成就 -->
+        <view class="team-rank-section-flat" v-if="activeReport.rank_in_groups.length > 0">
+          <view class="section-title-flat">{{ teamTitle }}</view>
+          <view class="team-rank-row-flat" v-for="team in activeReport.rank_in_groups" :key="team.group_id">
+            <text class="team-name">{{ team.group_name }}</text>
+            <text class="team-rank">排名：第 <text class="highlight">{{ team.rank }}</text> 名 / 共 {{ team.total_members }} 人</text>
+          </view>
+        </view>
 
-      <!-- 团队成就 -->
-      <view class="team-rank-section" v-if="activeReport.rank_in_groups.length > 0">
-        <view class="section-title">团队摸鱼争霸</view>
-        <view class="team-rank-card" v-for="team in activeReport.rank_in_groups" :key="team.group_id">
-          <text class="team-name">🛡️ {{ team.group_name }}</text>
-          <text class="team-rank">本周排名：第 <text class="highlight">{{ team.rank }}</text> 名 / 共 {{ team.total_members }} 人</text>
+        <!-- 趣味评语 -->
+        <view class="commentary-box-flat">
+          <text class="comm-title">OPINION / {{ commentaryTitle }}</text>
+          <text class="comm-text">{{ commentaryMessage }}</text>
         </view>
       </view>
 
-      <view class="divider"></view>
-
-      <!-- 趣味评语 -->
-      <view class="commentary-card">
-        <text class="comm-title">🚽 摸鱼战神点评：</text>
-        <text class="comm-text">{{ commentaryMessage }}</text>
+      <!-- 暂无周报 -->
+      <view class="empty-state" v-else>
+        <text class="empty-title">NO REPORT / 无周报</text>
+        <text class="empty-desc">{{ emptyDescText }}</text>
       </view>
-    </view>
-
-    <!-- 暂无周报 -->
-    <view class="empty-state" v-else>
-      <text class="empty-emoji">📝</text>
-      <text class="empty-title">暂无周报数据</text>
-      <text class="empty-desc">每周一早上将自动生成您上一周的摸鱼周报。快去多拉几次粑粑积累数据吧！</text>
-    </view>
+    </PageTransition>
   </view>
 </template>
 
@@ -96,9 +89,16 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { apiCall } from '../../services/api'
+import { useThemeStore } from '../../stores/theme'
 import { formatMinutes } from '../../utils/formatters'
 import type { WeeklyReport } from '../../utils/types'
 
+// Components
+import PageTransition from '../../components/PageTransition.vue'
+import ThemeCard from '../../components/ThemeCard.vue'
+import NumberTicker from '../../components/NumberTicker.vue'
+
+const themeStore = useThemeStore()
 const reports = ref<WeeklyReport[]>([])
 const selectedReportIndex = ref(0)
 
@@ -136,31 +136,52 @@ const onReportChange = (e: any) => {
   selectedReportIndex.value = e.detail.value
 }
 
+// Dynamic labels
+const reportTitle = computed(() => {
+  return themeStore.isStock ? '周度交易研报' : '实验观察周报'
+})
+
+const purchasingTitle = computed(() => {
+  return themeStore.isStock ? '资产采购能力换算' : '科研资源配置换算'
+})
+
+const teamTitle = computed(() => {
+  return themeStore.isStock ? '自营团队对冲争霸' : '实验室课题组大比拼'
+})
+
+const commentaryTitle = computed(() => {
+  return themeStore.isStock ? '首席分析师点评' : '学术导师复审意见'
+})
+
+const emptyDescText = computed(() => {
+  return themeStore.isStock
+    ? '每周一早上将自动生成您上周的交易对账单。快去开盘委单积累数据吧！'
+    : '每周一早上将自动生成您上周的实验报告单。快去开动反应器积累数据吧！'
+})
+
 // 趣味评语
 const commentaryMessage = computed(() => {
   if (!activeReport.value) return ''
   const sessions = activeReport.value.total_sessions
   
-  if (sessions >= 10) {
-    return '本周拉屎极为频繁，简直是办公室排水系统的头号克星！老板看到此项数据，流下了感动的泪水，并默默扣紧了钱包。拉屎战神当之无愧！'
-  } else if (sessions >= 5) {
-    return '本周工作节奏健康，带薪拉屎张弛有度。把控时间极度精细，既让老板满脸笑容，也让自己兜里鼓鼓。堪称办公室高素质摸鱼楷模！'
+  if (themeStore.isStock) {
+    if (sessions >= 10) {
+      return '本周交易委单极度频繁，简直是市场最强多头主力！老板看到此项数据，流下了感动的泪水，并默默扣紧了钱包。持仓战神当之无愧！'
+    } else if (sessions >= 5) {
+      return '本周套利节奏非常健康，开平仓把握度绝佳。交易把控行云流水，既保证了资金流安全，也赚取了丰厚回报。堪称自营团队楷模！'
+    } else {
+      return '本周交易流水寥寥，是否市场交投清淡，或者工作太忙忘记了开盘？机会转瞬即逝，请注意盯盘，不要让资金白白沉睡！'
+    }
   } else {
-    return '本周拉屎次数偏少，是否工作太忙忘记了摸鱼？请注意多喝热水，工作再累，也不要忘记带薪排泄，不要让马桶圈空守孤寂！'
+    if (sessions >= 10) {
+      return '本周反应测试极其密集，是实验室当之无愧的产能之王！导师看着论文发表进度表示大受震撼。实验之星非你莫属！'
+    } else if (sessions >= 5) {
+      return '本周科研进度稳扎稳打，反应步骤张弛有度。实验参数控制极度精细，既保证了数据可复现，也实现了高效产出。堪称学术先锋！'
+    } else {
+      return '本周反应次数偏低，是否被琐碎杂务打扰，实验进度有些滞后？科学研究贵在坚持，请适时启动仪器，不要让反应釜空守尘土！'
+    }
   }
 })
-
-const getComparisonIcon = (iconName: string): string => {
-  const iconMap: { [k: string]: string } = {
-    'coffee': '☕',
-    'ice-cream': '🍦',
-    'bubble-tea': '🥤',
-    'pancake': '🥞',
-    'takeout': '🥡',
-    'movie': '🎬'
-  }
-  return iconMap[iconName] || '🎁'
-}
 
 const formatDateRange = (start: number, end: number): string => {
   const s = new Date(start)
@@ -171,181 +192,165 @@ const formatDateRange = (start: number, end: number): string => {
 </script>
 
 <style lang="scss" scoped>
-.report-container {
-  padding: 32rpx;
+.page-container {
+  padding: 40rpx;
   min-height: 100vh;
-  background-color: $bg-primary;
+  box-sizing: border-box;
+  background-color: var(--bg-primary);
   display: flex;
   flex-direction: column;
-  gap: 32rpx;
-  box-sizing: border-box;
+  gap: 40rpx;
 }
 
-// 选择卡
-.picker-card {
-  background-color: $bg-card;
-  border-radius: $radius-md;
-  padding: 24rpx 32rpx;
-  box-shadow: $shadow-sm;
-  border: 1rpx solid #ffe8d8;
+// 选择器
+.picker-card-flat {
   display: flex;
   align-items: center;
   justify-content: space-between;
 
   .picker-label {
-    font-size: 26rpx;
-    color: $text-secondary;
-    font-weight: bold;
+    font-size: 24rpx;
+    color: var(--text-primary);
+    font-weight: 800;
   }
 
   .picker-value-box {
     display: flex;
     align-items: center;
     gap: 12rpx;
-    background-color: #fff9f5;
-    border: 1rpx solid #ffd8c0;
-    border-radius: $radius-sm;
+    background-color: var(--bg-primary);
+    border: 1rpx solid var(--border);
     padding: 12rpx 24rpx;
 
     .val {
-      font-size: 24rpx;
+      font-size: 22rpx;
       font-weight: bold;
-      color: $color-primary-dark;
+      color: var(--accent-warn);
+      font-family: var(--font-mono);
     }
 
     .arrow {
-      font-size: 18rpx;
-      color: $text-hint;
+      font-size: 16rpx;
+      color: var(--text-secondary);
     }
   }
 }
 
-// 周报正文卡
-.report-card {
-  background-color: $bg-card;
-  border-radius: $radius-lg;
-  padding: 40rpx;
-  box-shadow: $shadow-md;
-  border: 1rpx solid #ffe8d8;
+// 周报正文扁平布局
+.report-layout-flat {
   display: flex;
   flex-direction: column;
-  gap: 28rpx;
+  gap: 40rpx;
+  width: 100%;
 
-  .card-header {
-    display: flex;
-    align-items: center;
-    gap: 20rpx;
-
-    .header-icon {
-      font-size: 56rpx;
-    }
+  .report-header {
+    border-bottom: 2rpx solid var(--border);
+    padding-bottom: 24rpx;
 
     .header-meta {
       display: flex;
       flex-direction: column;
-      gap: 4rpx;
+      gap: 6rpx;
 
       .title {
-        font-size: 32rpx;
-        font-weight: bold;
-        color: $text-primary;
+        font-size: 36rpx;
+        font-weight: 800;
+        color: var(--text-primary);
+        letter-spacing: 1rpx;
       }
       .date-range {
-        font-size: 20rpx;
-        color: $text-hint;
+        font-size: 18rpx;
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
       }
     }
-  }
-
-  .divider {
-    height: 2rpx;
-    background-color: #f5f5f5;
   }
 }
 
 // 汇总网格
-.metrics-grid {
+.metrics-grid-flat {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20rpx;
+  border-bottom: 1rpx dashed var(--border);
+  padding-bottom: 30rpx;
 
-  .metric-item {
-    background-color: #fffcf9;
-    border: 1rpx solid #fff2e8;
-    border-radius: $radius-md;
+  .metric-item-flat {
+    background-color: transparent;
+    border: 1rpx solid var(--border);
     padding: 24rpx;
     display: flex;
     flex-direction: column;
     align-items: center;
 
     .lbl {
-      font-size: 20rpx;
-      color: $text-hint;
+      font-size: 18rpx;
+      color: var(--text-secondary);
       margin-bottom: 8rpx;
+      text-transform: uppercase;
+      letter-spacing: 1rpx;
     }
 
     .val {
-      font-size: 30rpx;
-      font-weight: bold;
-      color: $text-primary;
+      font-size: 26rpx;
+      font-weight: 800;
+      color: var(--text-primary);
     }
 
     .salary-text {
-      font-size: 40rpx;
-      color: $color-primary;
-      font-family: 'Courier New', Courier, monospace;
+      font-size: 34rpx;
+      color: var(--accent);
+      font-family: var(--font-mono);
     }
   }
 }
 
 // 购买力
-.comparisons-section {
+.comparisons-section-flat {
   display: flex;
   flex-direction: column;
   gap: 16rpx;
+  border-bottom: 1rpx dashed var(--border);
+  padding-bottom: 30rpx;
 
-  .section-title {
-    font-size: 26rpx;
-    font-weight: bold;
-    color: $text-secondary;
+  .section-title-flat {
+    font-size: 22rpx;
+    font-weight: 800;
+    color: var(--text-secondary);
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 
-  .comparisons-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16rpx;
+  .comparisons-list-flat {
+    display: flex;
+    flex-direction: column;
+    gap: 12rpx;
 
-    .comparison-item {
+    .comparison-row-flat {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      background-color: #fafafa;
-      border-radius: $radius-sm;
-      padding: 16rpx 20rpx;
-      gap: 16rpx;
-      border: 1rpx solid #eeeeee;
+      padding: 16rpx 0;
+      border-bottom: 1rpx solid var(--border);
 
-      .comp-icon {
-        font-size: 44rpx;
+      &:last-child {
+        border-bottom: none;
       }
 
-      .comp-meta {
-        display: flex;
-        flex-direction: column;
+      .comp-name {
+        font-size: 22rpx;
+        color: var(--text-primary);
+        font-weight: 600;
+      }
 
-        .comp-name {
-          font-size: 24rpx;
-          color: $text-primary;
-          font-weight: bold;
-        }
+      .comp-qty {
+        font-size: 20rpx;
+        color: var(--text-secondary);
 
-        .comp-qty {
-          font-size: 20rpx;
-          color: $text-hint;
-
-          .highlight {
-            color: $color-primary-dark;
-            font-weight: bold;
-          }
+        .highlight {
+          color: var(--accent-warn);
+          font-weight: 800;
+          font-family: var(--font-mono);
         }
       }
     }
@@ -353,65 +358,72 @@ const formatDateRange = (start: number, end: number): string => {
 }
 
 // 团队争霸
-.team-rank-section {
+.team-rank-section-flat {
   display: flex;
   flex-direction: column;
   gap: 16rpx;
+  border-bottom: 1rpx dashed var(--border);
+  padding-bottom: 30rpx;
 
-  .section-title {
-    font-size: 26rpx;
-    font-weight: bold;
-    color: $text-secondary;
+  .section-title-flat {
+    font-size: 22rpx;
+    font-weight: 800;
+    color: var(--text-secondary);
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 
-  .team-rank-card {
-    background-color: #f5f9ff;
-    border: 1rpx solid #d0e3ff;
-    border-radius: $radius-sm;
-    padding: 20rpx 24rpx;
+  .team-rank-row-flat {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 16rpx 0;
+    border-bottom: 1rpx solid var(--border);
+
+    &:last-child {
+      border-bottom: none;
+    }
 
     .team-name {
-      font-size: 24rpx;
-      font-weight: bold;
-      color: #1a56cc;
+      font-size: 22rpx;
+      font-weight: 600;
+      color: var(--accent-info);
     }
 
     .team-rank {
-      font-size: 22rpx;
-      color: $text-secondary;
+      font-size: 20rpx;
+      color: var(--text-secondary);
 
       .highlight {
-        color: #1a56cc;
-        font-weight: bold;
-        font-size: 26rpx;
+        color: var(--accent-warn);
+        font-weight: 800;
+        font-family: var(--font-mono);
       }
     }
   }
 }
 
 // 评语卡
-.commentary-card {
-  background-color: #fff9f0;
-  border: 1rpx solid #ffe8cc;
-  border-radius: $radius-md;
-  padding: 24rpx 32rpx;
+.commentary-box-flat {
+  border: 1rpx solid var(--border);
+  background-color: var(--bg-card);
+  padding: 24rpx;
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
+  gap: 12rpx;
 
   .comm-title {
-    font-size: 24rpx;
-    font-weight: bold;
-    color: $color-primary-dark;
+    font-size: 18rpx;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 
   .comm-text {
-    font-size: 22rpx;
-    color: $text-secondary;
-    line-height: 1.4;
+    font-size: 20rpx;
+    color: var(--text-secondary);
+    line-height: 1.5;
     font-style: italic;
   }
 }
@@ -425,23 +437,26 @@ const formatDateRange = (start: number, end: number): string => {
   padding: 120rpx 40rpx;
   text-align: center;
 
-  .empty-emoji {
-    font-size: 140rpx;
-    margin-bottom: 24rpx;
-    opacity: 0.8;
-  }
-
   .empty-title {
-    font-size: 32rpx;
-    font-weight: bold;
-    color: $text-primary;
+    font-size: 26rpx;
+    font-weight: 800;
+    color: var(--text-primary);
     margin-bottom: 12rpx;
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 
   .empty-desc {
-    font-size: 24rpx;
-    color: $text-hint;
+    font-size: 22rpx;
+    color: var(--text-secondary);
     max-width: 80%;
+    line-height: 1.5;
+  }
+}
+
+.theme-stock {
+  .metric-item-flat {
+    background-color: var(--bg-card);
   }
 }
 </style>

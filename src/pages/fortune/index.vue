@@ -1,73 +1,80 @@
 <template>
-  <view class="fortune-container">
-    <!-- 黄历主体卡片 -->
-    <view class="almanac-card">
-      <view class="calendar-header">
-        <text class="date-gregorian">{{ currentDateStr }}</text>
-        <text class="lunar-lbl">{{ lunarDateStr }}</text>
-      </view>
-
-      <view class="divider"></view>
-
-      <!-- 屎运得分 -->
-      <view class="fortune-score-section">
-        <text class="score-lbl">今日屎运指数</text>
-        <view class="score-circle">
-          <text class="score-num">{{ score }}</text>
-          <text class="score-pct">分</text>
+  <view class="page-container" :class="themeStore.themeClass">
+    <PageTransition>
+      <view class="fortune-layout">
+        <!-- 头部日期 -->
+        <view class="fortune-header">
+          <text class="date-gregorian">{{ currentDateStr }}</text>
+          <text class="lunar-lbl">{{ lunarDateStr }}</text>
         </view>
-        <text class="score-evaluation" :style="{ color: scoreColor }">{{ evaluation }}</text>
-      </view>
 
-      <view class="divider"></view>
-
-      <!-- 黄金指南 -->
-      <view class="golden-tips">
-        <view class="tip-row">
-          <text class="label">⏰ 黄金时段：</text>
-          <text class="val">{{ goldenTime }}</text>
+        <!-- 运势指数 -->
+        <view class="score-section">
+          <view class="score-row">
+            <text class="score-lbl">{{ scoreTitle }}</text>
+            <view class="score-box">
+              <NumberTicker class="score-num" :value="score" :precision="0" />
+              <text class="score-unit">%</text>
+            </view>
+          </view>
+          <text class="score-evaluation" :style="{ color: scoreColor }">// STATUS: {{ evaluation }}</text>
         </view>
-        <view class="tip-row">
-          <text class="label">🚽 幸运坑位：</text>
-          <text class="val">{{ luckyStall }}</text>
-        </view>
-      </view>
 
-      <view class="divider"></view>
-
-      <!-- 宜与忌 -->
-      <view class="yi-ji-section">
-        <view class="yi-column">
-          <view class="title-circle yi">宜</view>
-          <view class="item-list">
-            <text class="item" v-for="y in yiItems" :key="y">{{ y }}</text>
+        <!-- 参数指标 -->
+        <view class="tips-grid">
+          <view class="tip-card-flat">
+            <text class="label">{{ goldenTimeLabel }}</text>
+            <text class="val">{{ goldenTime }}</text>
+          </view>
+          <view class="tip-card-flat">
+            <text class="label">{{ luckyStallLabel }}</text>
+            <text class="val">{{ luckyStall }}</text>
           </view>
         </view>
-        
-        <view class="split-line"></view>
 
-        <view class="ji-column">
-          <view class="title-circle ji">忌</view>
-          <view class="item-list">
-            <text class="item" v-for="j in jiItems" :key="j">{{ j }}</text>
+        <!-- 宜与忌对仗列表 -->
+        <view class="yi-ji-grid">
+          <view class="yiji-box yi">
+            <text class="box-title">RECOMMENDED / 宜</text>
+            <view class="item-list">
+              <view class="item-row" v-for="y in yiItems" :key="y">
+                <text class="bullet">■</text>
+                <text class="item-text">{{ y }}</text>
+              </view>
+            </view>
+          </view>
+          
+          <view class="yiji-box ji">
+            <text class="box-title">AVOID / 忌</text>
+            <view class="item-list">
+              <view class="item-row" v-for="j in jiItems" :key="j">
+                <text class="bullet">□</text>
+                <text class="item-text">{{ j }}</text>
+              </view>
+            </view>
           </view>
         </view>
-      </view>
 
-      <view class="divider"></view>
-
-      <!-- 每日神谕 -->
-      <view class="quote-section">
-        <text class="quote-label">💡 每日摸鱼神谕：</text>
-        <text class="quote-text">“ {{ dailyQuote }} ”</text>
+        <!-- 每日神谕 / 实验信条 -->
+        <view class="quote-box-flat">
+          <text class="quote-label">{{ quoteLabel }}</text>
+          <text class="quote-text">“{{ dailyQuote }}”</text>
+        </view>
       </view>
-    </view>
+    </PageTransition>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
+import { useThemeStore } from '../../stores/theme'
+
+// Components
+import PageTransition from '../../components/PageTransition.vue'
+import NumberTicker from '../../components/NumberTicker.vue'
+
+const themeStore = useThemeStore()
 
 const currentDateStr = ref('')
 const lunarDateStr = ref('')
@@ -84,6 +91,23 @@ onShow(() => {
   generateFortune()
 })
 
+// Dynamic labels
+const scoreTitle = computed(() => {
+  return themeStore.isStock ? '今日交易增值指数' : '实验纯净度与平稳系数'
+})
+
+const goldenTimeLabel = computed(() => {
+  return themeStore.isStock ? '最佳平仓窗口' : '最佳取样观测窗口'
+})
+
+const luckyStallLabel = computed(() => {
+  return themeStore.isStock ? '幸运交易席位号' : '幸运高精度工作台'
+})
+
+const quoteLabel = computed(() => {
+  return themeStore.isStock ? '盘前交易格言' : '重点实验研究信条'
+})
+
 const generateFortune = () => {
   const d = new Date()
   const year = d.getFullYear()
@@ -92,10 +116,10 @@ const generateFortune = () => {
   
   currentDateStr.value = `${year}年${month}月${day}日`
 
-  // 基于日期的伪随机种子，保证同一天打开生成相同的运势
+  // 基于日期的伪随机种子
   const seed = (year * 367 + month * 31 + day) % 100
 
-  // 生成仿农历标注 (天干地支 + 月日)
+  // 农历标注
   const heavenlyStems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
   const earthlyBranches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
   const lunarMonth = ((month + seed) % 12) + 1
@@ -105,262 +129,318 @@ const generateFortune = () => {
   const yearZodiac = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'][(year - 4) % 12]
   const monthStem = earthlyBranches[(lunarMonth - 1) % 12]
   const dayStem = earthlyBranches[(lunarDay - 1) % 12]
-  const yiSuffix = seed % 2 === 0 ? '(宜排泄)' : '(宜摸鱼)'
+  const yiSuffix = themeStore.isStock ? '(宜开盘对冲)' : '(宜取样调试)'
   lunarDateStr.value = `${yearStem}${yearBranch}年 (${yearZodiac}年) ${monthStem}月${dayStem}日 ${yiSuffix}`
 
-  // 1. 计算得分 (70 - 100)
-  score.value = 70 + (seed % 31)
+  // 1. 得分
+  score.value = 75 + (seed % 26)
 
-  // 2. 评语和颜色
-  if (score.value >= 95) {
-    evaluation.value = '拉屎封神 宜打持久战'
-    scoreColor.value = '#4CAF50' // 绿色健康
-  } else if (score.value >= 85) {
-    evaluation.value = '顺畅无比 捞钱良机'
-    scoreColor.value = '#FF8C42' // 经典暖橙
+  // 2. 评语及颜色
+  if (themeStore.isStock) {
+    if (score.value >= 95) {
+      evaluation.value = '牛市降临 宜重仓获利'
+      scoreColor.value = '#00E676'
+    } else if (score.value >= 85) {
+      evaluation.value = '波动良好 稳健套利'
+      scoreColor.value = '#58A6FF'
+    } else {
+      evaluation.value = '宽幅震荡 离盘观望'
+      scoreColor.value = '#FF6B35'
+    }
   } else {
-    evaluation.value = '略显曲折 稳妥为主'
-    scoreColor.value = '#FFC107' // 黄色预警
+    if (score.value >= 95) {
+      evaluation.value = '反应极佳 纯净度99.9%'
+      scoreColor.value = '#3498DB'
+    } else if (score.value >= 85) {
+      evaluation.value = '状态稳定 产出率正常'
+      scoreColor.value = '#2ECC71'
+    } else {
+      evaluation.value = '活性异常 建议校准仪器'
+      scoreColor.value = '#E74C3C'
+    }
   }
 
   // 3. 黄金时间
-  const times = [
-    '09:45 - 10:15 (打卡半小时后，老板正忙)',
-    '10:30 - 11:00 (上午思路闭塞期，建议带薪摸鱼)',
-    '14:00 - 14:30 (午后倦怠期，排毒提神最佳)',
-    '15:30 - 16:00 (下午茶时间，配着白噪音效率翻倍)',
-    '17:00 - 17:30 (临近下班，蓄力拉最后一泡带薪粑粑)'
+  const stockTimes = [
+    '09:45 - 10:15 (开盘确认趋势，平稳成交期)',
+    '10:45 - 11:15 (主力休整期，适宜冷静对账)',
+    '14:00 - 14:30 (午后蓄势期，避开跳水波段)',
+    '15:00 - 15:30 (尾盘拉升期，落袋为安最佳)'
   ]
-  goldenTime.value = times[seed % times.length]
-
-  // 4. 幸运坑位
-  const stalls = [
-    '靠墙3号深水坑位 (隐蔽安静，信号满格)',
-    '最内侧5号坑位 (通风管道口下方，空气清新)',
-    '无障碍大坑位 (空间开阔，利于思考架构)',
-    '中间2号坑位 (隔音效果佳，适合刷视频放外音)',
-    '靠窗1号坑位 (微风拂面，拉屎体验极佳)'
+  const labTimes = [
+    '09:00 - 09:30 (早间基准核对，仪器性能巅峰)',
+    '11:00 - 11:30 (中期稳定性测试，数据采集极佳)',
+    '14:30 - 15:00 (午后化学反应，宜静默记录曲线)',
+    '16:30 - 17:00 (晚间数据核对，适合整理归档)'
   ]
-  luckyStall.value = stalls[(seed + 3) % stalls.length]
+  goldenTime.value = themeStore.isStock 
+    ? stockTimes[seed % stockTimes.length]
+    : labTimes[seed % labTimes.length]
 
-  // 5. 宜 / 忌 库
-  const yiPool = ['带手机', '看短视频', '静音外放', '思考人生', '喝冰美式', '用三层纸', '双脚垫高', '戴降噪耳机']
-  const jiPool = ['憋着不拉', '打高画质手游', '忘带手纸', '发出巨响', '蹲超过30分钟', '老板在门外', 'Wi-Fi断网', '吃辣后排泄']
-
-  // 洗牌选择
-  const shuffledYi = [...yiPool].sort((a, b) => ((a.charCodeAt(0) * seed) % 10) - ((b.charCodeAt(0) * seed) % 10))
-  const shuffledJi = [...jiPool].sort((a, b) => ((a.charCodeAt(0) * (seed + 1)) % 10) - ((b.charCodeAt(0) * (seed + 1)) % 10))
-
-  yiItems.value = shuffledYi.slice(0, 3)
-  jiItems.value = shuffledJi.slice(0, 3)
-
-  // 6. 神谕
-  const quotes = [
-    '不要因为工作忙碌，就冷落了等候您的马桶。',
-    '每一秒蹲马桶的时间，都是您对资本家最无声的抗议。',
-    '工作是老板的，但拉屎赚的钱是自己的。',
-    '拉出来的叫粑粑，捞回去的叫真金白银。',
-    '蹲下是凡人，起立是带薪摸鱼的英雄。',
-    '生活就像拉屎，有时候你使了很大劲，出来的却只是个屁。所以顺其自然。'
+  // 4. 幸运位置
+  const stockStalls = [
+    'VIP超极速交易席位 (光纤直连，延迟小于1ms)',
+    '独立高级分析师单间 (隔音屏蔽，免噪声打扰)',
+    '中央交易大厅2号机位 (全局视野，紧盯走势板)',
+    '靠窗休息讨论区席位 (海风拂面，舒缓盯盘压力)'
   ]
-  dailyQuote.value = quotes[seed % quotes.length]
+  const labStalls = [
+    '3号高精度静电天平间 (无尘无风，精确至微克)',
+    '双重负压通风柜5号端口 (空气流速最佳，安全隔离)',
+    '超净工作台2号位 (紫外灭菌彻底，无菌率高)',
+    '恒温恒湿培养箱A区 (反应条件最恒定，误差极小)'
+  ]
+  luckyStall.value = themeStore.isStock
+    ? stockStalls[(seed + 3) % stockStalls.length]
+    : labStalls[(seed + 3) % labStalls.length]
+
+  // 5. 宜与忌
+  if (themeStore.isStock) {
+    const yiPool = ['盯盘冷思', '签署合约', '分段止盈', '跟进多头', '喝冰咖啡', '降噪耳机', '背部靠垫']
+    const jiPool = ['满仓抗单', '盲目听信八卦', '委单忘设止损', '频繁撤单', '网络卡顿', '疲劳看盘']
+    yiItems.value = [...yiPool].sort(() => 0.5 - Math.random()).slice(0, 3)
+    jiItems.value = [...jiPool].sort(() => 0.5 - Math.random()).slice(0, 3)
+  } else {
+    const yiPool = ['校准仪器', '双人复核', '记录曲线', '佩戴护目镜', '气阀核验', '备足耗材', '整理归档']
+    const jiPool = ['伪造数据', '单人配试剂', '仪器漏气', '数据忘备份', '久坐不动', '盲目调参数']
+    yiItems.value = [...yiPool].sort(() => 0.5 - Math.random()).slice(0, 3)
+    jiItems.value = [...jiPool].sort(() => 0.5 - Math.random()).slice(0, 3)
+  }
+
+  // 6. 每日神谕
+  const stockQuotes = [
+    '不要因为一时的行情跳水，就忽略了资产的长期增值。',
+    '每一次平仓委单，都是对市场利润最冷静的提取。',
+    '合约是写在纸上的，但套利回来的盈亏是掌握在手中的。',
+    '空头和多头都能在市场中生存，唯有贪婪 and 盲目不能。',
+    '坐如磐石是交易员的本分，冷静平仓是锁住利润的终点。'
+  ]
+  const labQuotes = [
+    '严谨的实验记录，是打开学术大门唯一的钥匙。',
+    '仪器和软件只是一面镜子，实验数据的真实度才是科研的灵魂。',
+    '每一次多余的误差，都是在为你将来的重做埋下伏笔。',
+    '科学的终极奥义在于，于千万次扰动中寻找守恒的规律。',
+    '蹲下是潜心求索的助理研究员，站起来是攻坚克难的领军人。'
+  ]
+  dailyQuote.value = themeStore.isStock
+    ? stockQuotes[seed % stockQuotes.length]
+    : labQuotes[seed % labQuotes.length]
 }
 </script>
 
 <style lang="scss" scoped>
-.fortune-container {
-  padding: 32rpx;
+.page-container {
   min-height: 100vh;
-  background-color: $bg-primary;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
   box-sizing: border-box;
+  background-color: var(--bg-primary);
+  padding: 40rpx;
 }
 
-// 黄历纸质卡片
-.almanac-card {
+.fortune-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 40rpx;
   width: 100%;
-  background-color: #fffdf9; // 宣纸色线
-  border-radius: $radius-lg;
-  padding: 48rpx 36rpx;
-  box-shadow: $shadow-md;
-  border: 4rpx double #d4af37; // 仿古金线
+}
+
+// 头部日期
+.fortune-header {
   display: flex;
   flex-direction: column;
-  gap: 28rpx;
+  gap: 8rpx;
+  border-bottom: 2rpx solid var(--border);
+  padding-bottom: 24rpx;
 
-  .calendar-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8rpx;
-
-    .date-gregorian {
-      font-size: 36rpx;
-      font-weight: 800;
-      color: $text-primary;
-    }
-
-    .lunar-lbl {
-      font-size: 22rpx;
-      color: #b8860b;
-      font-weight: bold;
-    }
+  .date-gregorian {
+    font-size: 36rpx;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: 1rpx;
   }
 
-  .divider {
-    height: 2rpx;
-    background-color: #f0e6df;
+  .lunar-lbl {
+    font-size: 20rpx;
+    color: var(--accent-warn);
+    font-weight: bold;
+    letter-spacing: 2rpx;
   }
 }
 
-// 运势环
-.fortune-score-section {
+// 运势指数
+.score-section {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 16rpx;
+  padding: 24rpx 0;
+  border-bottom: 1rpx dashed var(--border);
 
-  .score-lbl {
-    font-size: 24rpx;
-    color: $text-secondary;
-    font-weight: bold;
-  }
-
-  .score-circle {
-    width: 180rpx;
-    height: 180rpx;
-    border-radius: 999rpx;
-    border: 8rpx solid #ffd700;
+  .score-row {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    background-color: #ffffff;
-    box-shadow: inset 0 0 20rpx rgba(255, 215, 0, 0.2);
 
-    .score-num {
-      font-size: 72rpx;
+    .score-lbl {
+      font-size: 24rpx;
       font-weight: 800;
-      color: $color-primary-dark;
-      font-family: 'Georgia', serif;
+      color: var(--text-secondary);
+      letter-spacing: 2rpx;
+      text-transform: uppercase;
     }
 
-    .score-pct {
-      font-size: 24rpx;
-      color: $text-secondary;
-      margin-left: 4rpx;
-      align-self: flex-end;
-      margin-bottom: 24rpx;
+    .score-box {
+      display: flex;
+      align-items: baseline;
+
+      .score-num {
+        font-size: 64rpx;
+        font-weight: 800;
+        color: var(--accent);
+        font-family: var(--font-mono);
+      }
+
+      .score-unit {
+        font-size: 24rpx;
+        color: var(--text-secondary);
+        margin-left: 4rpx;
+      }
     }
   }
 
   .score-evaluation {
-    font-size: 28rpx;
-    font-weight: 800;
+    font-size: 22rpx;
+    font-weight: 600;
+    font-family: var(--font-mono);
   }
 }
 
-// 指南
-.golden-tips {
+// 参数指标
+.tips-grid {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
-  background-color: #fff9e8;
-  border-radius: $radius-sm;
-  padding: 20rpx 24rpx;
-  border: 1rpx solid #ffe6a3;
+  gap: 20rpx;
+  border-bottom: 1rpx dashed var(--border);
+  padding-bottom: 30rpx;
 
-  .tip-row {
+  .tip-card-flat {
     display: flex;
-    font-size: 24rpx;
+    flex-direction: column;
+    gap: 8rpx;
 
     .label {
-      color: #8b6508;
-      font-weight: bold;
-      flex-shrink: 0;
+      font-size: 18rpx;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 2rpx;
     }
+
     .val {
-      color: $text-primary;
-      font-weight: 500;
+      font-size: 24rpx;
+      font-weight: bold;
+      color: var(--text-primary);
     }
   }
 }
 
-// 宜与忌列表排版
-.yi-ji-section {
+// 宜与忌对仗列表
+.yi-ji-grid {
   display: flex;
-  justify-content: space-between;
-  padding: 0 10rpx;
-  position: relative;
+  gap: 30rpx;
+  border-bottom: 1rpx dashed var(--border);
+  padding-bottom: 30rpx;
 
-  .yi-column, .ji-column {
+  .yiji-box {
     flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 20rpx;
-  }
+    gap: 16rpx;
 
-  .title-circle {
-    width: 60rpx;
-    height: 60rpx;
-    border-radius: 999rpx;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 28rpx;
-    font-weight: 800;
-    color: #ffffff;
-    box-shadow: 0 4rpx 8rpx rgba(0,0,0,0.15);
-  }
-
-  .title-circle.yi { background-color: #4CAF50; }
-  .title-circle.ji { background-color: #f44336; }
-
-  .item-list {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12rpx;
-
-    .item {
-      font-size: 24rpx;
-      font-weight: bold;
-      color: $text-primary;
+    .box-title {
+      font-size: 18rpx;
+      font-weight: 800;
+      letter-spacing: 2rpx;
     }
-  }
 
-  .split-line {
-    width: 2rpx;
-    background-color: #f0e6df;
-    align-self: stretch;
-    margin: 0 20rpx;
+    &.yi {
+      .box-title { color: var(--accent); }
+      .bullet { color: var(--accent); }
+    }
+
+    &.ji {
+      .box-title { color: var(--accent-warn); }
+      .bullet { color: var(--accent-warn); }
+    }
+
+    .item-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12rpx;
+
+      .item-row {
+        display: flex;
+        align-items: center;
+        gap: 12rpx;
+
+        .bullet {
+          font-size: 14rpx;
+        }
+
+        .item-text {
+          font-size: 22rpx;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+      }
+    }
   }
 }
 
-// 摸鱼神谕
-.quote-section {
+// 每日神谕
+.quote-box-flat {
   display: flex;
   flex-direction: column;
   gap: 12rpx;
-  background-color: #f5f5f5;
-  border-radius: $radius-sm;
   padding: 24rpx;
-  border: 1rpx solid #e5e5e5;
+  border: 1rpx solid var(--border);
+  background-color: var(--bg-card);
 
   .quote-label {
-    font-size: 22rpx;
-    color: $text-hint;
-    font-weight: bold;
+    font-size: 18rpx;
+    color: var(--text-secondary);
+    font-weight: 800;
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 
   .quote-text {
-    font-size: 24rpx;
-    color: $text-secondary;
+    font-size: 22rpx;
+    color: var(--text-primary);
     font-style: italic;
-    line-height: 1.4;
-    text-align: center;
+    line-height: 1.5;
+  }
+}
+
+// Stock Theme refinements
+.theme-stock {
+  .fortune-layout {
+    background-color: var(--bg-card);
+    border: 1rpx solid var(--border);
+    padding: 40rpx;
+  }
+  .quote-box-flat {
+    border-color: var(--border);
+    background-color: var(--bg-primary);
+  }
+}
+
+// Lab Theme refinements
+.theme-lab {
+  .fortune-layout {
+    background-color: transparent;
+    padding: 0;
+  }
+  .quote-box-flat {
+    border: 1rpx solid var(--border);
+    background-color: transparent;
   }
 }
 </style>

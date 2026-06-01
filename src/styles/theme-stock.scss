@@ -1,0 +1,14 @@
+.theme-stock {
+  --bg-primary: #0D1117;
+  --bg-card: rgba(255, 255, 255, 0.04);
+  --text-primary: #E8E8E8;
+  --text-secondary: #8B949E;
+  --accent: #00E676;     // Stock green (profit)
+  --accent-warn: #FF6B35; // Stock red/orange (warn/loss)
+  --accent-info: #58A6FF; // Info blue
+  --border: #30363D;
+  --font-mono: 'JetBrains Mono', 'Courier New', Courier, monospace;
+  
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}

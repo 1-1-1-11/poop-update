@@ -1,0 +1,14 @@
+.theme-lab {
+  --bg-primary: #FFFFFF; // Pure white paper background
+  --bg-card: #FFFFFF;
+  --text-primary: #1F2937; // Charcoal primary text
+  --text-secondary: #4B5563; // Muted gray secondary text
+  --accent: #111827;     // Extremely deep slate (LaTeX default)
+  --accent-warn: #DC2626; // Precision crimson alert
+  --accent-info: #2563EB; // Precision blue
+  --border: #E5E7EB;     // Ultra fine divider border
+  --font-mono: 'IBM Plex Serif', 'Times New Roman', Georgia, serif;
+  
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}

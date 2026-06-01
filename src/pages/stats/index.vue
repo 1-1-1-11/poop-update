@@ -1,146 +1,176 @@
 <template>
-  <view class="stats-container">
-    <!-- 顶部时间段选项卡 -->
-    <view class="tabs-row">
-      <view 
-        class="tab-item" 
-        :class="{ active: activePeriod === 'week' }"
-        @tap="switchPeriod('week')"
-      >
-        本周
+  <view class="page-container" :class="themeStore.themeClass">
+    <PageTransition>
+      <!-- 顶部时间段选项卡 -->
+      <view class="tabs-row">
+        <view 
+          class="tab-item" 
+          :class="{ active: activePeriod === 'week' }"
+          @tap="switchPeriod('week')"
+        >
+          本周
+        </view>
+        <view 
+          class="tab-item" 
+          :class="{ active: activePeriod === 'month' }"
+          @tap="switchPeriod('month')"
+        >
+          本月
+        </view>
+        <view 
+          class="tab-item" 
+          :class="{ active: activePeriod === 'year' }"
+          @tap="switchPeriod('year')"
+        >
+          今年
+        </view>
+        <view 
+          class="tab-item" 
+          :class="{ active: activePeriod === 'all' }"
+          @tap="switchPeriod('all')"
+        >
+          累计
+        </view>
       </view>
-      <view 
-        class="tab-item" 
-        :class="{ active: activePeriod === 'month' }"
-        @tap="switchPeriod('month')"
-      >
-        本月
-      </view>
-      <view 
-        class="tab-item" 
-        :class="{ active: activePeriod === 'year' }"
-        @tap="switchPeriod('year')"
-      >
-        今年
-      </view>
-      <view 
-        class="tab-item" 
-        :class="{ active: activePeriod === 'all' }"
-        @tap="switchPeriod('all')"
-      >
-        累计
-      </view>
-    </view>
 
-    <!-- 汇总统计卡片 -->
-    <view class="summary-section">
-      <view class="sum-card big-card">
-        <text class="sum-label">摸鱼总收益</text>
-        <text class="sum-val salary-text">¥{{ statsData?.total_earnings.toFixed(2) || '0.00' }}</text>
-      </view>
-      <view class="half-cards-row">
-        <view class="sum-card">
-          <text class="sum-label">如厕频次</text>
-          <text class="sum-val">{{ statsData?.total_sessions || 0 }}次</text>
+      <!-- 汇总账目板 (高密度三栏式 Ledger) -->
+      <ThemeCard customClass="ledger-board">
+        <view class="ledger-top-row">
+          <text class="lbl">累计已赚{{ themeStore.t('earnings') }}</text>
+          <NumberTicker 
+            class="val-large font-mono" 
+            :value="statsData?.total_earnings || 0" 
+            prefix="¥" 
+            :precision="2" 
+          />
         </view>
-        <view class="sum-card">
-          <text class="sum-label">拉屎总时长</text>
-          <text class="sum-val">{{ formatHours(statsData?.total_duration_seconds || 0) }}</text>
-        </view>
-      </view>
-      <view class="half-cards-row">
-        <view class="sum-card">
-          <text class="sum-label">平均时长</text>
-          <text class="sum-val">{{ formatMinutes(statsData?.avg_duration_seconds || 0) }}</text>
-        </view>
-        <view class="sum-card">
-          <text class="sum-label">平均舒适度</text>
-          <text class="sum-val">★{{ statsData?.avg_comfort || '0.0' }}</text>
-        </view>
-      </view>
-    </view>
+        
+        <view class="ledger-divider-line"></view>
 
-    <!-- 24小时分布直方图 -->
-    <view class="chart-card">
-      <view class="chart-header">24小时如厕分布</view>
-      <scroll-view class="hourly-bar-scroll" scroll-x="true" show-scrollbar="false">
-        <view class="hourly-bar-chart">
-          <view 
-            class="bar-column" 
-            v-for="(count, hour) in hourlyDistribution" 
-            :key="hour"
-          >
-            <view class="bar-container">
-              <view 
-                class="bar-fill" 
-                :style="{ height: getBarHeightPercent(count) + '%' }"
-              >
-                <text class="bar-count-tip" v-if="count > 0">{{ count }}</text>
-              </view>
-            </view>
-            <text class="bar-label">{{ String(hour).padStart(2, '0') }}</text>
+        <view class="ledger-grid">
+          <view class="ledger-column">
+            <text class="sub-lbl">累计{{ themeStore.t('todayCount') }}</text>
+            <NumberTicker 
+              class="sub-val font-mono" 
+              :value="statsData?.total_sessions || 0" 
+              suffix="次" 
+              :precision="0" 
+            />
+          </view>
+          
+          <view class="vertical-line"></view>
+
+          <view class="ledger-column">
+            <text class="sub-lbl">累计{{ themeStore.t('poopDuration') }}</text>
+            <text class="sub-val">{{ formatHours(statsData?.total_duration_seconds || 0) }}</text>
+          </view>
+
+          <view class="vertical-line"></view>
+
+          <view class="ledger-column">
+            <text class="sub-lbl">平均{{ themeStore.t('comfortLevel') }}</text>
+            <text class="sub-val font-mono">★{{ statsData?.avg_comfort?.toFixed(1) || '0.0' }}</text>
           </view>
         </view>
-      </scroll-view>
-      <text class="chart-desc">反映您在哪个工作时间段拉屎最频繁。</text>
-    </view>
+      </ThemeCard>
 
-    <!-- 舒适度趋势折线图 (Canvas 渲染, 兼容小程序) -->
-    <view class="chart-card" v-if="statsData?.comfort_trend?.length">
-      <view class="chart-header">肠胃状态趋势 (舒适度)</view>
-      <canvas canvas-id="comfortChart" class="trend-canvas"></canvas>
-      <view class="trend-labels">
-        <text class="start-date">{{ comfortStartDate }}</text>
-        <text class="trend-title-label">舒适度变化 (1-5星)</text>
-        <text class="end-date">{{ comfortEndDate }}</text>
+      <!-- 24小时分布直方图 -->
+      <view class="chart-section-flat">
+        <view class="chart-header-flat">24小时{{ themeStore.t('todayCount') }}分布</view>
+        <scroll-view class="hourly-bar-scroll" scroll-x="true" show-scrollbar="false">
+          <view class="hourly-bar-chart">
+            <view 
+              class="bar-column" 
+              v-for="(count, hour) in hourlyDistribution" 
+              :key="hour"
+            >
+              <view class="bar-container">
+                <view 
+                  class="bar-fill" 
+                  :style="{ height: getBarHeightPercent(count) + '%' }"
+                >
+                  <text class="bar-count-tip" v-if="count > 0">{{ count }}</text>
+                </view>
+              </view>
+              <text class="bar-label">{{ String(hour).padStart(2, '0') }}</text>
+            </view>
+          </view>
+        </scroll-view>
+        <text class="chart-desc-flat">{{ distributionDesc }}</text>
       </view>
-    </view>
 
-    <!-- 日历热力图 (本月) -->
-    <view class="chart-card">
-      <view class="chart-header">本月如厕足迹 (打卡热力图)</view>
-      <view class="calendar-grid">
-        <view class="weekday-header" v-for="wd in weekdays" :key="wd">{{ wd }}</view>
-        <!-- 空白格填充 -->
-        <view class="day-cell empty" v-for="empty in calendarPadding" :key="'empty-'+empty"></view>
-        <!-- 日历天 -->
-        <view 
-          class="day-cell" 
-          v-for="day in calendarDays" 
-          :key="'day-'+day.date"
-          :class="getHeatmapClass(day.count)"
-          @tap="showDayStats(day)"
-        >
-          <text class="day-num">{{ day.dayNum }}</text>
-          <text class="day-count-tag" v-if="day.count > 0">{{ day.count }}</text>
+      <view class="section-divider"></view>
+
+      <!-- 趋势折线图 -->
+      <view class="chart-section-flat" v-if="chartData.length > 0">
+        <view class="chart-header-flat">{{ themeStore.t('statsTitle') }}</view>
+        <view class="canvas-wrapper-flat">
+          <DataChart canvasId="comfortChart" type="line" :data="chartData" />
+        </view>
+        <view class="trend-labels">
+          <text class="start-date">{{ comfortStartDate }}</text>
+          <text class="trend-title-label">{{ trendLabel }}</text>
+          <text class="end-date">{{ comfortEndDate }}</text>
         </view>
       </view>
-      <view class="heatmap-legend">
-        <text class="legend-lbl">少</text>
-        <view class="legend-box heat-0"></view>
-        <view class="legend-box heat-1"></view>
-        <view class="legend-box heat-2"></view>
-        <view class="legend-box heat-3"></view>
-        <text class="legend-lbl">多</text>
+
+      <view class="section-divider" v-if="chartData.length > 0"></view>
+
+      <!-- 日历热力图 (本月 Github Contribution 点阵风) -->
+      <view class="chart-section-flat">
+        <view class="chart-header-flat">{{ calendarHeader }}</view>
+        
+        <view class="heatmap-container-flat">
+          <view class="calendar-grid-flat">
+            <view class="weekday-header" v-for="wd in weekdays" :key="wd">{{ wd }}</view>
+            <!-- 空白格填充 -->
+            <view class="day-dot empty" v-for="empty in calendarPadding" :key="'empty-'+empty"></view>
+            <!-- 点阵单元 -->
+            <view 
+              class="day-dot" 
+              v-for="day in calendarDays" 
+              :key="'day-'+day.date"
+              :class="getHeatmapClass(day.count)"
+              @tap="showDayStats(day)"
+            >
+              <text class="dot-num-lbl">{{ day.dayNum }}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="heatmap-legend-flat">
+          <text class="legend-lbl">少</text>
+          <view class="legend-dot heat-0"></view>
+          <view class="legend-dot heat-1"></view>
+          <view class="legend-dot heat-2"></view>
+          <view class="legend-dot heat-3"></view>
+          <text class="legend-lbl">多</text>
+        </view>
       </view>
-    </view>
+    </PageTransition>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { apiCall } from '../../services/api'
+import { useThemeStore } from '../../stores/theme'
 import { formatHours, formatMinutes } from '../../utils/formatters'
 import type { StatsData } from '../../utils/types'
 
+// Components
+import PageTransition from '../../components/PageTransition.vue'
+import ThemeCard from '../../components/ThemeCard.vue'
+import NumberTicker from '../../components/NumberTicker.vue'
+import DataChart from '../../components/DataChart.vue'
+
+const themeStore = useThemeStore()
 const activePeriod = ref<'week' | 'month' | 'year' | 'all'>('week')
 const statsData = ref<StatsData | null>(null)
 
-// 24小时分布数组
 const hourlyDistribution = ref<number[]>(new Array(24).fill(0))
 
-// 日历热力图字段
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
 const calendarPadding = ref(0)
 const calendarDays = ref<any[]>([])
@@ -167,80 +197,24 @@ const loadStats = async () => {
   }
 }
 
-// 柱状图高度计算比例
+const chartData = computed(() => {
+  const trend = statsData.value?.comfort_trend || []
+  return trend.map(t => ({
+    label: t.date.substring(5),
+    value: t.avg_comfort
+  }))
+})
+
 const getBarHeightPercent = (count: number): number => {
   const max = Math.max(...hourlyDistribution.value)
   if (max === 0) return 0
   return (count / max) * 100
 }
 
-// Canvas 折线图绘制
-const drawComfortChart = () => {
-  const trend = statsData.value?.comfort_trend
-  if (!trend || trend.length === 0) return
-
-  const canvasWidth = 320
-  const canvasHeight = 120
-  const padding = { top: 10, bottom: 10, left: 10, right: 10 }
-  const chartW = canvasWidth - padding.left - padding.right
-  const chartH = canvasHeight - padding.top - padding.bottom
-
-  const ctx = uni.createCanvasContext('comfortChart')
-  if (!ctx) return
-
-  const points = trend.map((t, idx) => {
-    const x = trend.length > 1
-      ? padding.left + idx * (chartW / (trend.length - 1))
-      : canvasWidth / 2
-    const y = padding.top + chartH - ((t.avg_comfort - 1) / 4) * chartH
-    return { x, y }
-  })
-
-  // 水平参考线
-  ctx.setStrokeStyle('#f0f0f0')
-  ctx.setLineWidth(1)
-  ctx.setLineDash([3, 3], 0)
-  for (let i = 1; i <= 3; i++) {
-    const y = padding.top + (chartH / 4) * i
-    ctx.beginPath()
-    ctx.moveTo(padding.left, y)
-    ctx.lineTo(canvasWidth - padding.right, y)
-    ctx.stroke()
-  }
-  ctx.setLineDash([], 0)
-
-  // 折线
-  if (points.length > 1) {
-    ctx.setStrokeStyle('#FF8C42')
-    ctx.setLineWidth(3)
-    ctx.setLineCap('round')
-    ctx.setLineJoin('round')
-    ctx.beginPath()
-    ctx.moveTo(points[0].x, points[0].y)
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].x, points[i].y)
-    }
-    ctx.stroke()
-  }
-
-  // 数据点
-  points.forEach(pt => {
-    ctx.setFillStyle('#ffffff')
-    ctx.setStrokeStyle('#FF8C42')
-    ctx.setLineWidth(2)
-    ctx.beginPath()
-    ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.stroke()
-  })
-
-  ctx.draw()
-}
-
 const comfortStartDate = computed(() => {
   const trend = statsData.value?.comfort_trend || []
   if (trend.length === 0) return ''
-  return trend[0].date.substring(5) // MM-DD
+  return trend[0].date.substring(5)
 })
 
 const comfortEndDate = computed(() => {
@@ -249,22 +223,36 @@ const comfortEndDate = computed(() => {
   return trend[trend.length - 1].date.substring(5)
 })
 
-// 生成当前月的热力图日历
+const distributionDesc = computed(() => {
+  return themeStore.isStock
+    ? '反映您在哪个股票开盘交易时间段最为活跃。'
+    : '反映您在哪个科学观察时间段的样本计数最多。'
+})
+
+const trendLabel = computed(() => {
+  return themeStore.isStock
+    ? '操作满意度走势'
+    : '实验平均纯净度变化'
+})
+
+const calendarHeader = computed(() => {
+  return themeStore.isStock
+    ? '本月交易足迹 (点阵对账)'
+    : '本月实验足迹 (点阵记录)'
+})
+
 const loadCalendarHeatmap = async () => {
   const now = new Date()
   const year = now.getFullYear()
   const month = now.getMonth() + 1
 
-  // 1. 获取当月第一天星期几
   const firstDay = new Date(year, month - 1, 1)
-  let firstDayOfWeek = firstDay.getDay() // 0-6 (0=周日)
-  firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1 // 转化：0=周一，6=周日
+  let firstDayOfWeek = firstDay.getDay()
+  firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1
   calendarPadding.value = firstDayOfWeek
 
-  // 2. 获取当月总天数
   const totalDays = new Date(year, month, 0).getDate()
 
-  // 3. 调用 API 获取本月每日数据
   try {
     const res = await apiCall<{ days: any[] }>('session-manager', 'dailyStats', { year, month })
     const dailyStats = res.code === 0 ? res.data?.days || [] : []
@@ -288,7 +276,6 @@ const loadCalendarHeatmap = async () => {
   }
 }
 
-// 舒适热力等级
 const getHeatmapClass = (count: number): string => {
   if (count === 0) return 'heat-0'
   if (count === 1) return 'heat-1'
@@ -298,130 +285,165 @@ const getHeatmapClass = (count: number): string => {
 
 const showDayStats = (day: any) => {
   if (day.count > 0) {
+    const label = themeStore.isStock ? '交易' : '实验'
     uni.showToast({
-      title: `${day.date} 带薪如厕 ${day.count} 次`,
+      title: `${day.date} 带薪${label} ${day.count} 次`,
       icon: 'none'
     })
   }
 }
-
-// 数据变化后绘制折线图
-watch(statsData, () => {
-  nextTick(() => drawComfortChart())
-})
-
 </script>
 
 <style lang="scss" scoped>
-.stats-container {
-  padding: 32rpx;
+.page-container {
+  padding: 40rpx;
   min-height: 100vh;
-  background-color: $bg-primary;
+  box-sizing: border-box;
+  background-color: var(--bg-primary);
   display: flex;
   flex-direction: column;
-  gap: 32rpx;
-  box-sizing: border-box;
+  gap: 40rpx;
+}
+
+// Dot Map variables
+.theme-stock {
+  --dot-bg: #161B22;
+  --dot-1: rgba(0, 230, 118, 0.2);
+  --dot-2: rgba(0, 230, 118, 0.6);
+  --dot-3: #00E676;
+}
+
+.theme-lab {
+  --dot-bg: #F3F4F6;
+  --dot-1: rgba(37, 99, 235, 0.15);
+  --dot-2: rgba(37, 99, 235, 0.5);
+  --dot-3: #2563EB;
 }
 
 // 选项卡
 .tabs-row {
   display: flex;
-  background-color: #f0e6df;
-  border-radius: $radius-round;
+  background-color: var(--border);
+  border-radius: var(--radius-round);
   padding: 8rpx;
+  width: 100%;
+  box-sizing: border-box;
 
   .tab-item {
     flex: 1;
     text-align: center;
     font-size: 26rpx;
     font-weight: bold;
-    color: $text-secondary;
+    color: var(--text-secondary);
     padding: 16rpx 0;
-    border-radius: $radius-round;
+    border-radius: var(--radius-round);
     transition: all 0.3s ease;
 
     &.active {
-      background-color: $color-primary;
+      background-color: var(--accent);
       color: #ffffff;
-      box-shadow: 0 4rpx 12rpx rgba(255, 140, 66, 0.3);
     }
   }
 }
 
-// 汇总统计卡片
-.summary-section {
+// 三栏对账单
+.ledger-board {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
+  gap: 20rpx;
 
-  .sum-card {
-    background-color: $bg-card;
-    border: 1rpx solid #ffe8d8;
-    border-radius: $radius-md;
-    padding: 24rpx 32rpx;
+  .ledger-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .lbl {
+      font-size: 22rpx;
+      color: var(--text-secondary);
+      font-weight: bold;
+    }
+
+    .val-large {
+      font-size: 48rpx;
+      font-weight: 800;
+      color: var(--accent);
+    }
+  }
+
+  .ledger-divider-line {
+    height: 1rpx;
+    background-color: var(--border);
+    width: 100%;
+  }
+
+  .ledger-grid {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .ledger-column {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    box-shadow: $shadow-sm;
+    align-items: center;
+    gap: 8rpx;
 
-    .sum-label {
-      font-size: 22rpx;
-      color: $text-hint;
+    .sub-lbl {
+      font-size: 18rpx;
+      color: var(--text-secondary);
     }
 
-    .sum-val {
-      font-size: 36rpx;
-      font-weight: 800;
-      color: $text-primary;
-      margin-top: 4rpx;
-    }
-
-    .salary-text {
-      font-size: 52rpx;
-      color: $color-primary;
-      font-family: 'Courier New', Courier, monospace;
+    .sub-val {
+      font-size: 28rpx;
+      font-weight: bold;
+      color: var(--text-primary);
     }
   }
 
-  .big-card {
-    padding: 32rpx 40rpx;
-  }
-
-  .half-cards-row {
-    display: flex;
-    gap: 16rpx;
-
-    .sum-card {
-      flex: 1;
-    }
+  .vertical-line {
+    width: 2rpx;
+    height: 48rpx;
+    background-color: var(--border);
   }
 }
 
-// 图表卡片通用
-.chart-card {
-  background-color: $bg-card;
-  border-radius: $radius-lg;
-  padding: 32rpx;
-  box-shadow: $shadow-sm;
-  border: 1rpx solid #ffe8d8;
+// 扁平图表区块
+.chart-section-flat {
   display: flex;
   flex-direction: column;
+  width: 100%;
 
-  .chart-header {
-    font-size: 28rpx;
-    font-weight: bold;
-    color: $text-secondary;
-    border-left: 6rpx solid $color-primary;
+  .chart-header-flat {
+    font-size: 24rpx;
+    font-weight: 800;
+    color: var(--text-primary);
+    border-left: 6rpx solid var(--accent);
     padding-left: 16rpx;
     line-height: 1;
-    margin-bottom: 32rpx;
+    margin-bottom: 24rpx;
+    text-transform: uppercase;
+    letter-spacing: 2rpx;
   }
 
-  .chart-desc {
-    font-size: 20rpx;
-    color: $text-hint;
-    text-align: center;
-    margin-top: 16rpx;
+  .canvas-wrapper-flat {
+    width: 100%;
+    box-sizing: border-box;
   }
+
+  .chart-desc-flat {
+    font-size: 18rpx;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: 12rpx;
+  }
+}
+
+.section-divider {
+  height: 2rpx;
+  background-color: var(--border);
+  width: 100%;
 }
 
 // 24h直方图
@@ -446,15 +468,15 @@ watch(statsData, () => {
     .bar-container {
       height: 150rpx;
       width: 16rpx;
-      background-color: #f7f7f7;
-      border-radius: $radius-round;
+      background-color: var(--border);
+      border-radius: var(--radius-round);
       display: flex;
       align-items: flex-end;
 
       .bar-fill {
         width: 100%;
-        background: linear-gradient(180deg, $color-primary-light 0%, $color-primary 100%);
-        border-radius: $radius-round;
+        background: linear-gradient(180deg, var(--accent-info) 0%, var(--accent) 100%);
+        border-radius: var(--radius-round);
         position: relative;
         transition: height 0.5s ease;
 
@@ -464,7 +486,7 @@ watch(statsData, () => {
           left: 50%;
           transform: translateX(-50%);
           font-size: 16rpx;
-          color: $color-primary-dark;
+          color: var(--accent);
           font-weight: bold;
         }
       }
@@ -472,17 +494,10 @@ watch(statsData, () => {
 
     .bar-label {
       font-size: 16rpx;
-      color: $text-hint;
+      color: var(--text-secondary);
       margin-top: 8rpx;
     }
   }
-}
-
-// Canvas 折线图
-.trend-canvas {
-  width: 100%;
-  height: 150rpx;
-  margin-top: 10rpx;
 }
 
 .trend-labels {
@@ -490,89 +505,67 @@ watch(statsData, () => {
   justify-content: space-between;
   align-items: center;
   font-size: 20rpx;
-  color: $text-hint;
+  color: var(--text-secondary);
   margin-top: 12rpx;
 
   .trend-title-label {
-    color: $text-secondary;
     font-weight: bold;
   }
 }
 
-// 日历热力图
-.calendar-grid {
+// 点阵日历热力图
+.heatmap-container-flat {
+  width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.calendar-grid-flat {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 10rpx;
-  margin-top: 10rpx;
+  gap: 8rpx;
+  width: 100%;
+  box-sizing: border-box;
 
   .weekday-header {
     text-align: center;
-    font-size: 22rpx;
-    color: $text-hint;
+    font-size: 20rpx;
+    color: var(--text-secondary);
     padding-bottom: 8rpx;
     font-weight: bold;
   }
 
-  .day-cell {
+  .day-dot {
     aspect-ratio: 1;
-    border-radius: $radius-sm;
+    border-radius: 4rpx; // strict geometric dot
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
     position: relative;
+    border: none;
+    box-shadow: none;
 
-    .day-num {
-      font-size: 24rpx;
-      font-weight: bold;
-      color: $text-primary;
+    .dot-num-lbl {
+      font-size: 16rpx;
+      color: transparent; // hide numbers inside dot map for clean github look
     }
 
-    .day-count-tag {
-      position: absolute;
-      top: 2rpx;
-      right: 4rpx;
-      font-size: 14rpx;
-      background-color: rgba(255, 255, 255, 0.7);
-      border-radius: 999rpx;
-      width: 22rpx;
-      height: 22rpx;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: $color-primary-dark;
-      font-weight: 800;
+    &:hover .dot-num-lbl {
+      color: inherit;
     }
   }
 
   .empty {
-    background-color: transparent;
+    background-color: transparent !important;
   }
 
-  // 热度填充色
-  .heat-0 {
-    background-color: #f7f7f7;
-    .day-num { color: #bbbbbb; }
-  }
-  .heat-1 {
-    background-color: #ffeae0;
-    border: 1rpx solid #ffd8c0;
-    .day-num { color: $color-primary-dark; }
-  }
-  .heat-2 {
-    background-color: #ffccb0;
-    border: 1rpx solid #ffa070;
-    .day-num { color: $color-primary-dark; }
-  }
-  .heat-3 {
-    background-color: $color-primary;
-    border: 1rpx solid $color-primary-dark;
-    .day-num { color: #ffffff; }
-  }
+  .heat-0 { background-color: var(--dot-bg); }
+  .heat-1 { background-color: var(--dot-1); }
+  .heat-2 { background-color: var(--dot-2); }
+  .heat-3 { background-color: var(--dot-3); }
 }
 
-.heatmap-legend {
+.heatmap-legend-flat {
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -580,19 +573,19 @@ watch(statsData, () => {
   margin-top: 24rpx;
 
   .legend-lbl {
-    font-size: 20rpx;
-    color: $text-hint;
+    font-size: 18rpx;
+    color: var(--text-secondary);
   }
 
-  .legend-box {
-    width: 20rpx;
-    height: 20rpx;
+  .legend-dot {
+    width: 24rpx;
+    height: 24rpx;
     border-radius: 4rpx;
   }
   
-  .heat-0 { background-color: #f7f7f7; }
-  .heat-1 { background-color: #ffeae0; }
-  .heat-2 { background-color: #ffccb0; }
-  .heat-3 { background-color: $color-primary; }
+  .heat-0 { background-color: var(--dot-bg); }
+  .heat-1 { background-color: var(--dot-1); }
+  .heat-2 { background-color: var(--dot-2); }
+  .heat-3 { background-color: var(--dot-3); }
 }
 </style>

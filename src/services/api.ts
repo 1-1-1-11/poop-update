@@ -260,12 +260,8 @@ class MockServer {
     MockDatabase.set('current_uid', uid)
     MockDatabase.set('user', newUser)
 
-    // 装填 mock 历史数据
-    this.initialize()
-
-    // 重新获取一下（带装填后最新的生涯属性）
-    const freshUser = MockDatabase.get<User>('user', newUser)
-    return { code: 0, msg: '注册成功', data: { user: freshUser } }
+    // 不装填 mock 历史数据，从空白开始
+    return { code: 0, msg: '注册成功', data: { user: newUser } }
   }
 
   static getProfile(): ApiResponse {

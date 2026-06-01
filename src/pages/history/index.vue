@@ -1,108 +1,125 @@
 <template>
-  <view class="history-container">
-    <!-- 生涯概览卡片 -->
-    <view class="summary-card">
-      <view class="summary-header">生涯累计摸鱼战绩</view>
-      <view class="summary-grid">
-        <view class="summary-item">
-          <text class="val">¥{{ totalEarnings.toFixed(2) }}</text>
-          <text class="label">累计赚取</text>
+  <view class="page-container" :class="themeStore.themeClass">
+    <PageTransition>
+      <!-- 生涯概览 (扁平总账板) -->
+      <ThemeCard customClass="summary-board-flat">
+        <view class="summary-header">生涯累计{{ themeStore.t('history') }}</view>
+        <view class="summary-grid">
+          <view class="summary-item">
+            <NumberTicker 
+              class="val" 
+              :value="totalEarnings" 
+              prefix="¥" 
+              :precision="2" 
+            />
+            <text class="label">累计{{ themeStore.t('earnings') }}</text>
+          </view>
+          <view class="summary-item border-left">
+            <NumberTicker 
+              class="val" 
+              :value="totalCount" 
+              suffix="次" 
+              :precision="0" 
+            />
+            <text class="label">累计{{ themeStore.t('todayCount') }}</text>
+          </view>
+          <view class="summary-item border-left">
+            <text class="val">{{ formatHours(totalDuration) }}</text>
+            <text class="label">累计{{ themeStore.t('poopDuration') }}</text>
+          </view>
         </view>
-        <view class="summary-item border-left">
-          <text class="val">{{ totalCount }}次</text>
-          <text class="label">如厕次数</text>
-        </view>
-        <view class="summary-item border-left">
-          <text class="val">{{ formatHours(totalDuration) }}</text>
-          <text class="label">累计时长</text>
-        </view>
-      </view>
-    </view>
+      </ThemeCard>
 
-    <!-- 筛选面板 -->
-    <view class="filter-panel">
-      <view class="filter-row">
-        <picker mode="date" :value="startDateStr" @change="onStartDateChange">
-          <view class="date-picker-btn">
-            <text class="picker-label">开始：</text>
-            <text class="picker-value">{{ startDateStr || '请选择' }}</text>
-          </view>
-        </picker>
-        <text class="filter-split">至</text>
-        <picker mode="date" :value="endDateStr" @change="onEndDateChange">
-          <view class="date-picker-btn">
-            <text class="picker-label">结束：</text>
-            <text class="picker-value">{{ endDateStr || '请选择' }}</text>
-          </view>
-        </picker>
-      </view>
-      <view class="filter-actions">
-        <button class="action-btn clear-btn" @tap="handleResetFilter">重置</button>
-        <button class="action-btn search-btn" @tap="handleSearch">搜索</button>
-      </view>
-    </view>
-
-    <!-- 记录列表 -->
-    <view class="list-section" v-if="sessions.length > 0">
-      <view 
-        class="session-card" 
-        v-for="item in sessions" 
-        :key="item._id"
-      >
-        <view class="card-header">
-          <text class="poop-date">{{ formatDateTime(item.start_time) }}</text>
-          <text class="poop-earnings">¥{{ item.earnings.toFixed(2) }}</text>
+      <!-- 筛选面板 -->
+      <ThemeCard customClass="filter-panel-flat">
+        <view class="filter-row">
+          <picker mode="date" :value="startDateStr" @change="onStartDateChange">
+            <view class="date-picker-btn">
+              <text class="picker-label">START: </text>
+              <text class="picker-value">{{ startDateStr || 'YYYY-MM-DD' }}</text>
+            </view>
+          </picker>
+          <text class="filter-split">至</text>
+          <picker mode="date" :value="endDateStr" @change="onEndDateChange">
+            <view class="date-picker-btn">
+              <text class="picker-label">END: </text>
+              <text class="picker-value">{{ endDateStr || 'YYYY-MM-DD' }}</text>
+            </view>
+          </picker>
         </view>
-        <view class="card-details">
-          <view class="detail-row">
-            <text class="detail-label">🕒 蹲厕时长：</text>
-            <text class="detail-val">{{ formatDurationSec(item.duration_seconds) }}</text>
+        <view class="filter-actions">
+          <button class="action-btn clear-btn" @tap="handleResetFilter">重置</button>
+          <button class="action-btn search-btn" @tap="handleSearch">检索</button>
+        </view>
+      </ThemeCard>
+
+      <!-- 记录列表 (平铺对账单) -->
+      <view class="list-section" v-if="sessions.length > 0">
+        <view 
+          class="session-row-flat" 
+          v-for="item in sessions" 
+          :key="item._id"
+        >
+          <view class="row-header">
+            <text class="poop-date">{{ formatDateTime(item.start_time) }}</text>
+            <text class="poop-earnings">¥{{ item.earnings.toFixed(2) }}</text>
           </view>
-          <view class="detail-row">
-            <text class="detail-label">⭐ 舒适程度：</text>
-            <view class="stars">
-              <text 
-                v-for="star in 5" 
-                :key="star" 
-                class="star" 
-                :class="{ active: star <= item.comfort_level }"
-              >
-                ★
-              </text>
+          <view class="row-details">
+            <view class="detail-row">
+              <text class="detail-label">{{ themeStore.t('poopDuration') }}：</text>
+              <text class="detail-val">{{ formatDurationSec(item.duration_seconds) }}</text>
+            </view>
+            <view class="detail-row">
+              <text class="detail-label">{{ themeStore.t('comfortLevel') }}：</text>
+              <view class="stars">
+                <text 
+                  v-for="star in 5" 
+                  :key="star" 
+                  class="star" 
+                  :class="{ active: star <= item.comfort_level }"
+                >
+                  ★
+                </text>
+              </view>
+            </view>
+            <view class="note-box-flat" v-if="item.note">
+              <text class="note-text">// {{ item.note }}</text>
             </view>
           </view>
-          <view class="note-box" v-if="item.note">
-            <text class="note-quote">“</text>
-            <text class="note-text">{{ item.note }}</text>
-          </view>
+        </view>
+
+        <!-- 加载更多提示 -->
+        <view class="load-more">
+          <text class="load-text" v-if="loadingMore">加载中...</text>
+          <text class="load-text" v-else>{{ hasMore ? '上拉加载更多...' : '— 已经全部加载完毕 —' }}</text>
         </view>
       </view>
 
-      <!-- 加载更多提示 -->
-      <view class="load-more">
-        <text class="load-text" v-if="loadingMore">加载中...</text>
-        <text class="load-text" v-else>{{ hasMore ? '上拉加载更多...' : '— 已经拉到底了 —' }}</text>
+      <!-- 空白状态 -->
+      <view class="empty-state" v-else>
+        <text class="empty-title">NO RECORD / 无记录</text>
+        <text class="empty-desc">{{ emptyText }}</text>
       </view>
-    </view>
-
-    <!-- 空白状态 -->
-    <view class="empty-state" v-else>
-      <text class="empty-emoji">🧻</text>
-      <text class="empty-title">暂无记录</text>
-      <text class="empty-desc">您还没有带薪拉屎的记录，快点击“开始拉屎”吧！</text>
-    </view>
+    </PageTransition>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onShow, onReachBottom } from '@dcloudio/uni-app'
 import { apiCall } from '../../services/api'
 import { useUserStore } from '../../stores/user'
+import { useThemeStore } from '../../stores/theme'
 import { formatHours, formatDurationSec, formatDateTime } from '../../utils/formatters'
 import type { PoopSession, StatsData } from '../../utils/types'
 
+// Components
+import PageTransition from '../../components/PageTransition.vue'
+import ThemeCard from '../../components/ThemeCard.vue'
+import NumberTicker from '../../components/NumberTicker.vue'
+
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 
 const sessions = ref<PoopSession[]>([])
 const page = ref(1)
@@ -175,6 +192,12 @@ onReachBottom(async () => {
   }
 })
 
+const emptyText = computed(() => {
+  return themeStore.isStock
+    ? '您还没有带薪交易流水，快点击首页的“开启交易”开盘吧！'
+    : '您还没有实验反应日志，快点击首页的“启动实验”添加记录吧！'
+})
+
 const onStartDateChange = (e: any) => {
   startDateStr.value = e.detail.value
   searchStartDate.value = new Date(e.detail.value + 'T00:00:00').getTime()
@@ -199,29 +222,28 @@ const handleResetFilter = async () => {
 </script>
 
 <style lang="scss" scoped>
-.history-container {
+.page-container {
   padding: 32rpx;
   min-height: 100vh;
-  background-color: $bg-primary;
+  box-sizing: border-box;
+  background-color: var(--bg-primary);
   display: flex;
   flex-direction: column;
   gap: 32rpx;
-  box-sizing: border-box;
 }
 
-// 头部汇总
-.summary-card {
-  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
-  border-radius: $radius-lg;
-  padding: 36rpx;
-  box-shadow: $shadow-md;
-  color: #ffffff;
+// 头部扁平总账板
+.summary-board-flat {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
 
   .summary-header {
-    font-size: 26rpx;
-    font-weight: bold;
-    opacity: 0.8;
-    margin-bottom: 24rpx;
+    font-size: 20rpx;
+    font-weight: 800;
+    color: var(--text-secondary);
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 
   .summary-grid {
@@ -236,30 +258,26 @@ const handleResetFilter = async () => {
       gap: 8rpx;
 
       .val {
-        font-size: 40rpx;
+        font-size: 36rpx;
         font-weight: 800;
-        font-family: 'Courier New', Courier, monospace;
+        font-family: var(--font-mono);
+        color: var(--accent);
       }
 
       .label {
-        font-size: 22rpx;
-        opacity: 0.8;
+        font-size: 20rpx;
+        color: var(--text-secondary);
       }
     }
 
     .border-left {
-      border-left: 2rpx solid rgba(255, 255, 255, 0.2);
+      border-left: 1rpx solid var(--border);
     }
   }
 }
 
 // 筛选面板
-.filter-panel {
-  background-color: $bg-card;
-  border-radius: $radius-md;
-  padding: 24rpx;
-  box-shadow: $shadow-sm;
-  border: 1rpx solid #ffe8d8;
+.filter-panel-flat {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
@@ -270,26 +288,28 @@ const handleResetFilter = async () => {
     justify-content: space-between;
 
     .date-picker-btn {
-      background-color: #fff9f5;
-      border: 1rpx solid #ffd8c0;
-      border-radius: $radius-sm;
+      background-color: var(--bg-primary);
+      border: 1rpx solid var(--border);
       padding: 16rpx 20rpx;
-      font-size: 24rpx;
-      color: $text-primary;
+      font-size: 22rpx;
+      color: var(--text-primary);
       display: flex;
       align-items: center;
 
       .picker-label {
-        color: $text-secondary;
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+        font-weight: bold;
       }
       .picker-value {
         font-weight: bold;
+        font-family: var(--font-mono);
       }
     }
 
     .filter-split {
-      font-size: 24rpx;
-      color: $text-hint;
+      font-size: 22rpx;
+      color: var(--text-secondary);
     }
   }
 
@@ -299,124 +319,128 @@ const handleResetFilter = async () => {
     gap: 20rpx;
 
     .action-btn {
-      font-size: 24rpx;
-      height: 60rpx;
-      line-height: 60rpx;
-      border-radius: $radius-round;
-      padding: 0 32rpx;
+      font-size: 22rpx;
+      height: 56rpx;
+      line-height: 56rpx;
+      border-radius: var(--radius-sm, 4rpx);
+      padding: 0 28rpx;
       border: none;
+      font-weight: bold;
+      letter-spacing: 1rpx;
+      text-transform: uppercase;
     }
 
     .clear-btn {
-      background-color: #f5f5f5;
-      color: $text-secondary;
+      background-color: transparent;
+      border: 1rpx solid var(--border);
+      color: var(--text-secondary);
+
+      &:active {
+        background-color: var(--border);
+        color: var(--text-primary);
+      }
     }
 
     .search-btn {
-      background-color: $color-primary;
+      background-color: var(--accent);
       color: #ffffff;
-      font-weight: bold;
+
+      &:active {
+        opacity: 0.9;
+      }
     }
   }
 }
 
-// 记录卡片
-.session-card {
-  background-color: $bg-card;
-  border-radius: $radius-md;
-  padding: 32rpx;
-  box-shadow: $shadow-sm;
-  border: 1rpx solid #ffe8d8;
-  margin-bottom: 24rpx;
+// 列表区
+.list-section {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
+  width: 100%;
+}
 
-  .card-header {
+.session-row-flat {
+  padding: 30rpx 0;
+  border-bottom: 1rpx solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+
+  .row-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
 
     .poop-date {
-      font-size: 26rpx;
-      color: $text-secondary;
-      font-weight: bold;
+      font-size: 24rpx;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
     }
 
     .poop-earnings {
-      font-size: 34rpx;
-      font-weight: bold;
-      color: $color-primary-dark;
-      font-family: 'Courier New', Courier, monospace;
+      font-size: 28rpx;
+      font-weight: 800;
+      color: var(--accent);
+      font-family: var(--font-mono);
     }
   }
 
-  .card-details {
+  .row-details {
     display: flex;
     flex-direction: column;
-    gap: 12rpx;
+    gap: 8rpx;
 
     .detail-row {
       display: flex;
       align-items: center;
-      font-size: 24rpx;
+      font-size: 22rpx;
 
       .detail-label {
-        color: $text-hint;
+        color: var(--text-secondary);
       }
       .detail-val {
-        color: $text-primary;
-        font-weight: 500;
+        color: var(--text-primary);
+        font-weight: 600;
       }
 
       .stars {
         display: flex;
         gap: 4rpx;
-        color: #e0e0e0;
+        color: var(--border);
         line-height: 1;
 
         .star {
-          font-size: 28rpx;
+          font-size: 20rpx;
         }
         .active {
-          color: #ffc107;
+          color: var(--accent);
         }
       }
     }
   }
 
-  .note-box {
-    margin-top: 12rpx;
-    background-color: #fffaf5;
-    border-radius: $radius-sm;
-    padding: 16rpx 20rpx;
-    display: flex;
-    gap: 8rpx;
-    border: 1rpx solid #fff0e2;
-
-    .note-quote {
-      font-size: 36rpx;
-      color: $color-primary-light;
-      line-height: 1;
-      font-weight: bold;
-    }
+  .note-box-flat {
+    margin-top: 8rpx;
+    padding: 12rpx 16rpx;
+    border-left: 2rpx solid var(--border);
+    background-color: rgba(255, 255, 255, 0.02);
 
     .note-text {
-      font-size: 24rpx;
-      color: $text-secondary;
-      line-height: 1.4;
-      font-style: italic;
+      font-size: 20rpx;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
     }
   }
 }
 
 .load-more {
   text-align: center;
-  padding: 20rpx 0;
+  padding: 30rpx 0;
 
   .load-text {
-    font-size: 22rpx;
-    color: $text-hint;
+    font-size: 20rpx;
+    color: var(--text-secondary);
+    letter-spacing: 1rpx;
   }
 }
 
@@ -429,23 +453,20 @@ const handleResetFilter = async () => {
   padding: 120rpx 40rpx;
   text-align: center;
 
-  .empty-emoji {
-    font-size: 140rpx;
-    margin-bottom: 24rpx;
-    opacity: 0.8;
-  }
-
   .empty-title {
-    font-size: 32rpx;
-    font-weight: bold;
-    color: $text-primary;
+    font-size: 26rpx;
+    font-weight: 800;
+    color: var(--text-primary);
     margin-bottom: 12rpx;
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 
   .empty-desc {
-    font-size: 24rpx;
-    color: $text-hint;
+    font-size: 22rpx;
+    color: var(--text-secondary);
     max-width: 80%;
+    line-height: 1.5;
   }
 }
 </style>

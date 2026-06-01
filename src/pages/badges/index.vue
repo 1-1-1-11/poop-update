@@ -1,70 +1,78 @@
 <template>
-  <view class="badges-container">
-    <!-- 顶部选项卡 -->
-    <view class="tabs-row">
-      <view 
-        class="tab-item" 
-        :class="{ active: activeTab === 'earned' }"
-        @tap="activeTab = 'earned'"
-      >
-        已解锁 ({{ earnedBadges.length }})
-      </view>
-      <view 
-        class="tab-item" 
-        :class="{ active: activeTab === 'locked' }"
-        @tap="activeTab = 'locked'"
-      >
-        未解锁 ({{ lockedBadges.length }})
-      </view>
-    </view>
-
-    <!-- 勋章网格 -->
-    <view class="badges-grid" v-if="currentBadges.length > 0">
-      <view 
-        class="badge-item" 
-        v-for="item in currentBadges" 
-        :key="item.key"
-        :class="[activeTab === 'locked' ? 'locked' : '', item.rarity]"
-        @tap="showBadgeDetail(item)"
-      >
-        <text class="badge-emoji">{{ getBadgeEmoji(item.key) }}</text>
-        <text class="badge-name">{{ item.name }}</text>
-        <text class="badge-rarity-lbl">{{ formatRarity(item.rarity) }}</text>
-      </view>
-    </view>
-    <view class="empty-state" v-else>
-      <text class="empty-emoji">🛡️</text>
-      <text class="empty-text">这里空空如也...</text>
-    </view>
-
-    <!-- 勋章详情弹窗 -->
-    <view class="detail-modal" v-if="selectedBadge" @tap="selectedBadge = null">
-      <view class="modal-content" @tap.stop :class="selectedBadge.rarity">
-        <text class="modal-emoji">{{ getBadgeEmoji(selectedBadge.key) }}</text>
-        <text class="modal-title">{{ selectedBadge.name }}</text>
-        
-        <view class="rarity-tag" :class="selectedBadge.rarity">
-          {{ formatRarity(selectedBadge.rarity) }}
+  <view class="page-container" :class="themeStore.themeClass">
+    <PageTransition>
+      <!-- 顶部选项卡 (扁平下划线式) -->
+      <view class="tabs-row">
+        <view 
+          class="tab-item" 
+          :class="{ active: activeTab === 'earned' }"
+          @tap="activeTab = 'earned'"
+        >
+          已解锁 ({{ earnedBadges.length }})
         </view>
-
-        <view class="divider"></view>
-        
-        <text class="modal-desc">{{ selectedBadge.description }}</text>
-        
-        <view class="reward-row">
-          <text class="reward-label">🏆 晋升奖励：</text>
-          <text class="reward-val">+{{ selectedBadge.xp_reward }} XP</text>
+        <view 
+          class="tab-item" 
+          :class="{ active: activeTab === 'locked' }"
+          @tap="activeTab = 'locked'"
+        >
+          未解锁 ({{ lockedBadges.length }})
         </view>
-
-        <view class="status-row">
-          <text class="status-lbl">当前状态：</text>
-          <text class="status-val success" v-if="activeTab === 'earned'">已解锁</text>
-          <text class="status-val locked-lbl" v-else>尚未解锁</text>
-        </view>
-
-        <button class="modal-close-btn" @tap="selectedBadge = null">知道啦</button>
       </view>
-    </view>
+
+      <!-- 勋章网格 -->
+      <view class="badges-grid" v-if="currentBadges.length > 0">
+        <view 
+          class="badge-item-wrap"
+          v-for="item in currentBadges" 
+          :key="item.key"
+          @tap="showBadgeDetail(item)"
+        >
+          <BadgeIcon 
+            :icon="getBadgeEmoji(item.key)" 
+            :rarity="item.rarity" 
+            :unlocked="activeTab === 'earned'"
+          />
+          <text class="badge-name">{{ item.name }}</text>
+          <text class="badge-rarity-lbl">{{ formatRarity(item.rarity) }}</text>
+        </view>
+      </view>
+      <view class="empty-state" v-else>
+        <text class="empty-text">NO ACHIEVEMENT / 暂无勋章</text>
+      </view>
+
+      <!-- 勋章详情弹窗 (扁平弹框) -->
+      <view class="detail-modal" v-if="selectedBadge" @tap="selectedBadge = null">
+        <ThemeCard customClass="modal-content-flat" @click.stop :class="selectedBadge.rarity">
+          <BadgeIcon 
+            :icon="getBadgeEmoji(selectedBadge.key)" 
+            :rarity="selectedBadge.rarity" 
+            :unlocked="activeTab === 'earned'"
+          />
+          <text class="modal-title">{{ selectedBadge.name }}</text>
+          
+          <view class="rarity-tag" :class="selectedBadge.rarity">
+            {{ formatRarity(selectedBadge.rarity) }}
+          </view>
+
+          <view class="divider"></view>
+          
+          <text class="modal-desc">{{ selectedBadge.description }}</text>
+          
+          <view class="reward-row">
+            <text class="reward-label">经验奖励：</text>
+            <text class="reward-val">+{{ selectedBadge.xp_reward }} XP</text>
+          </view>
+
+          <view class="status-row">
+            <text class="status-lbl">当前状态：</text>
+            <text class="status-val success" v-if="activeTab === 'earned'">已授予</text>
+            <text class="status-val locked-lbl" v-else>尚未解锁</text>
+          </view>
+
+          <button class="modal-close-btn" @tap="selectedBadge = null">知道啦</button>
+        </ThemeCard>
+      </view>
+    </PageTransition>
   </view>
 </template>
 
@@ -72,7 +80,15 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { apiCall } from '../../services/api'
+import { useThemeStore } from '../../stores/theme'
 import type { Badge } from '../../utils/types'
+
+// Components
+import PageTransition from '../../components/PageTransition.vue'
+import ThemeCard from '../../components/ThemeCard.vue'
+import BadgeIcon from '../../components/BadgeIcon.vue'
+
+const themeStore = useThemeStore()
 
 const activeTab = ref<'earned' | 'locked'>('earned')
 const earnedBadges = ref<Badge[]>([])
@@ -103,7 +119,7 @@ const showBadgeDetail = (badge: Badge) => {
   selectedBadge.value = badge
 }
 
-// 勋章与 Emoji 映射表，使 UI 极其生动有趣！
+// 勋章与 Emoji 映射表
 const getBadgeEmoji = (key: string): string => {
   const emojiMap: { [k: string]: string } = {
     'daily_triple': '🥉',
@@ -136,48 +152,56 @@ const getBadgeEmoji = (key: string): string => {
 }
 
 const formatRarity = (rarity: string): string => {
-  switch (rarity) {
-    case 'common': return '普通勋章'
-    case 'rare': return '稀有勋章'
-    case 'epic': return '史诗勋章'
-    case 'legendary': return '传说勋章'
-    default: return '普通勋章'
+  if (themeStore.isStock) {
+    switch (rarity) {
+      case 'common': return '普通交易席勋'
+      case 'rare': return '优质交易勋章'
+      case 'epic': return '卓越席位勋章'
+      case 'legendary': return '传奇殿堂勋章'
+      default: return '普通勋章'
+    }
+  } else {
+    switch (rarity) {
+      case 'common': return '普通实验奖章'
+      case 'rare': return '核心科研奖章'
+      case 'epic': return '重点成就奖章'
+      case 'legendary': return '至高学术奖章'
+      default: return '普通奖章'
+    }
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.badges-container {
-  padding: 32rpx;
+.page-container {
+  padding: 40rpx;
   min-height: 100vh;
-  background-color: $bg-primary;
+  box-sizing: border-box;
+  background-color: var(--bg-primary);
   display: flex;
   flex-direction: column;
-  gap: 32rpx;
-  box-sizing: border-box;
+  gap: 40rpx;
 }
 
-// 选项卡
+// 选项卡 (扁平下划线)
 .tabs-row {
   display: flex;
-  background-color: #f0e6df;
-  border-radius: $radius-round;
-  padding: 8rpx;
+  border-bottom: 2rpx solid var(--border);
+  padding: 0;
 
   .tab-item {
     flex: 1;
     text-align: center;
-    font-size: 26rpx;
-    font-weight: bold;
-    color: $text-secondary;
-    padding: 16rpx 0;
-    border-radius: $radius-round;
-    transition: all 0.3s ease;
+    font-size: 24rpx;
+    font-weight: 800;
+    color: var(--text-secondary);
+    padding: 24rpx 0;
+    border-bottom: 4rpx solid transparent;
+    transition: all 0.2s ease;
 
     &.active {
-      background-color: $color-primary;
-      color: #ffffff;
-      box-shadow: 0 4rpx 12rpx rgba(255, 140, 66, 0.3);
+      border-bottom-color: var(--accent);
+      color: var(--accent);
     }
   }
 }
@@ -186,59 +210,33 @@ const formatRarity = (rarity: string): string => {
 .badges-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20rpx;
+  gap: 24rpx;
   padding-bottom: 40rpx;
 
-  .badge-item {
-    background-color: $bg-card;
-    border-radius: $radius-md;
-    padding: 24rpx 16rpx;
+  .badge-item-wrap {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    box-shadow: $shadow-sm;
-    border: 1rpx solid #ffe8d8;
-    position: relative;
     box-sizing: border-box;
+    cursor: pointer;
 
     &:active {
-      transform: scale(0.96);
-    }
-
-    .badge-emoji {
-      font-size: 64rpx;
-      margin-bottom: 8rpx;
+      opacity: 0.8;
     }
 
     .badge-name {
-      font-size: 24rpx;
-      font-weight: bold;
-      color: $text-primary;
+      font-size: 22rpx;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-top: 12rpx;
     }
 
     .badge-rarity-lbl {
-      font-size: 16rpx;
-      color: $text-hint;
+      font-size: 18rpx;
+      color: var(--text-secondary);
       margin-top: 4rpx;
     }
-  }
-
-  // 锁定的灰色
-  .locked {
-    filter: grayscale(100%);
-    opacity: 0.55;
-    background-color: #f6f6f6;
-    border-color: #e0e0e0;
-  }
-
-  // 稀有度框色线
-  .common { border-color: #e0e0e0; }
-  .rare { border-color: #4CAF50; }
-  .epic { border-color: #2196F3; }
-  .legendary { 
-    border-color: #ffc107; 
-    box-shadow: 0 0 12rpx rgba(255, 193, 7, 0.2);
   }
 }
 
@@ -249,107 +247,108 @@ const formatRarity = (rarity: string): string => {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.6);
-  z-index: 100;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 999;
   display: flex;
   justify-content: center;
   align-items: center;
 
-  .modal-content {
+  .modal-content-flat {
     width: 75%;
-    background-color: $bg-card;
-    border-radius: $radius-lg;
-    padding: 48rpx;
-    box-shadow: 0 10rpx 40rpx rgba(0,0,0,0.3);
-    border: 4rpx solid #e0e0e0;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    animation: scaleUp 0.3s ease;
-
-    .modal-emoji {
-      font-size: 110rpx;
-      margin-bottom: 16rpx;
-    }
+    border: 1rpx solid var(--border);
+    padding: 40rpx;
+    box-sizing: border-box;
 
     .modal-title {
-      font-size: 34rpx;
+      font-size: 28rpx;
       font-weight: 800;
-      color: $text-primary;
+      color: var(--text-primary);
+      margin-top: 16rpx;
+      letter-spacing: 1rpx;
     }
 
     .rarity-tag {
-      font-size: 20rpx;
+      font-size: 18rpx;
       font-weight: bold;
-      color: #888888;
-      background-color: #f0f0f0;
+      color: var(--text-secondary);
+      background-color: var(--border);
       padding: 4rpx 16rpx;
-      border-radius: 6rpx;
       margin-top: 10rpx;
+      font-family: var(--font-mono);
     }
 
-    // 详情边框色变种
+    // Details borders mapping
     &.rare {
-      border-color: #4CAF50;
-      .rarity-tag { color: #ffffff; background-color: #4CAF50; }
+      border-color: #3498DB;
+      .rarity-tag { color: #ffffff; background-color: #3498DB; }
     }
     &.epic {
-      border-color: #2196F3;
-      .rarity-tag { color: #ffffff; background-color: #2196F3; }
+      border-color: #9B59B6;
+      .rarity-tag { color: #ffffff; background-color: #9B59B6; }
     }
     &.legendary {
-      border-color: #ffc107;
-      .rarity-tag { color: #333333; background-color: #ffc107; }
+      border-color: #F1C40F;
+      .rarity-tag { color: #333333; background-color: #F1C40F; }
     }
 
     .divider {
       width: 100%;
-      height: 2rpx;
-      background-color: #eeeeee;
+      height: 1rpx;
+      background-color: var(--border);
       margin: 24rpx 0;
     }
 
     .modal-desc {
-      font-size: 24rpx;
-      color: $text-secondary;
-      line-height: 1.4;
+      font-size: 22rpx;
+      color: var(--text-secondary);
+      line-height: 1.5;
       margin-bottom: 24rpx;
     }
 
     .reward-row, .status-row {
       display: flex;
-      font-size: 22rpx;
+      font-size: 20rpx;
       margin-bottom: 10rpx;
 
       .reward-label, .status-lbl {
-        color: $text-hint;
+        color: var(--text-secondary);
       }
       .reward-val {
-        color: $color-primary-dark;
-        font-weight: bold;
+        color: var(--accent-warn);
+        font-weight: 800;
+        font-family: var(--font-mono);
       }
       .status-val.success {
-        color: $color-success;
+        color: var(--accent);
         font-weight: bold;
       }
       .status-val.locked-lbl {
-        color: #f44336;
+        color: var(--accent-warn);
         font-weight: bold;
       }
     }
 
     .modal-close-btn {
       width: 80%;
-      background-color: #f5f5f5;
-      color: $text-secondary;
-      font-size: 26rpx;
-      font-weight: bold;
-      height: 72rpx;
-      line-height: 72rpx;
-      border-radius: $radius-round;
+      background-color: var(--accent);
+      color: #ffffff;
+      font-size: 24rpx;
+      font-weight: 800;
+      height: 80rpx;
+      line-height: 80rpx;
+      border-radius: var(--radius-sm, 4rpx);
       margin-top: 32rpx;
       border: none;
+      letter-spacing: 1rpx;
+      text-transform: uppercase;
+
+      &:active {
+        opacity: 0.9;
+      }
     }
   }
 }
@@ -362,18 +361,10 @@ const formatRarity = (rarity: string): string => {
   justify-content: center;
   padding: 100rpx 0;
 
-  .empty-emoji {
-    font-size: 80rpx;
-    margin-bottom: 16rpx;
-  }
   .empty-text {
-    font-size: 24rpx;
-    color: $text-hint;
+    font-size: 22rpx;
+    color: var(--text-secondary);
+    letter-spacing: 2rpx;
   }
-}
-
-@keyframes scaleUp {
-  from { transform: scale(0.85); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
 }
 </style>

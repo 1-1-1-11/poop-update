@@ -1,44 +1,18 @@
-// 主题色
-$color-primary: #FF8C42;
-$color-primary-light: #FFB380;
-$color-primary-dark: #E67330;
+// Load premium fonts
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,300;0,400;0,600;1,300&family=JetBrains+Mono:wght@300;400;600&display=swap');
 
-// 功能色
-$color-success: #4CAF50;
-$color-warning: #FFC107;
-$color-danger: #F44336;
-$color-info: #2196F3;
-
-// 反馈色
-$color-praise: #FFD700;
-$color-encourage: #FF6B6B;
-$color-normal: #4CAF50;
-
-// 背景色
-$bg-primary: #FFF8F0;
-$bg-card: #FFFFFF;
-$bg-section: #FFF0E0;
-
-// 文字色
-$text-primary: #333333;
-$text-secondary: #666666;
-$text-hint: #999999;
-$text-white: #FFFFFF;
-
-// 间距
+// Sizing metrics
 $spacing-xs: 8rpx;
 $spacing-sm: 16rpx;
 $spacing-md: 24rpx;
 $spacing-lg: 32rpx;
 $spacing-xl: 48rpx;
 
-// 圆角
 $radius-sm: 8rpx;
 $radius-md: 16rpx;
 $radius-lg: 24rpx;
 $radius-round: 999rpx;
 
-// 字号
 $font-xs: 22rpx;
 $font-sm: 26rpx;
 $font-md: 28rpx;
@@ -47,7 +21,21 @@ $font-xl: 36rpx;
 $font-xxl: 48rpx;
 $font-huge: 72rpx;
 
-// 阴影
 $shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
 $shadow-md: 0 4rpx 16rpx rgba(0, 0, 0, 0.12);
 $shadow-lg: 0 8rpx 32rpx rgba(0, 0, 0, 0.16);
+
+// Theme Mappings to CSS Variables
+$bg-primary: var(--bg-primary);
+$bg-card: var(--bg-card);
+$text-primary: var(--text-primary);
+$text-secondary: var(--text-secondary);
+$color-primary: var(--accent);
+$color-primary-light: var(--accent-info);
+$color-primary-dark: var(--accent-warn);
+$color-success: var(--accent);
+$color-warning: var(--accent-warn);
+$color-danger: var(--accent-warn);
+$color-info: var(--accent-info);
+$border: var(--border);
+$font-mono: var(--font-mono);

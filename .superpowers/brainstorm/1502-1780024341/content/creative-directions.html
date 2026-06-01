@@ -1,0 +1,123 @@
+<h2>4 个创意视觉方向 — 来自 UI/UX 设计专家</h2>
+<p class="subtitle">每个方向都是完整的视觉叙事，点击选择你最感兴趣的方向</p>
+
+<div class="cards">
+  <!-- 方向一：金融交易所 -->
+  <div class="card" data-choice="stock" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background: #0D1117; padding: 24px 16px; border-radius: 8px; font-family: monospace; border: 1px solid #30363D;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <span style="color: #58A6FF; font-size: 11px; font-weight: 700;">💩 BabaCapital</span>
+          <span style="color: #00E676; font-size: 10px;">● 实时</span>
+        </div>
+        <div style="color: #8B949E; font-size: 9px; margin-bottom: 4px;">当前持仓收益</div>
+        <div style="color: #00E676; font-size: 32px; font-weight: 900; letter-spacing: -1px;">+¥3.42</div>
+        <div style="display: flex; gap: 16px; margin-top: 8px;">
+          <div><span style="color: #8B949E; font-size: 8px;">时长</span><br><span style="color: #E8E8E8; font-size: 14px; font-weight: 700;">02:35</span></div>
+          <div><span style="color: #8B949E; font-size: 8px;">日收益率</span><br><span style="color: #00E676; font-size: 14px; font-weight: 700;">+0.42%</span></div>
+          <div><span style="color: #8B949E; font-size: 8px;">秒薪</span><br><span style="color: #FF6B35; font-size: 14px; font-weight: 700;">¥0.022</span></div>
+        </div>
+        <div style="border-top: 1px solid #30363D; margin-top: 10px; padding-top: 8px;">
+          <span style="color: #FF6B35; font-size: 10px;">▼ 卖出</span>
+          <span style="color: #00E676; font-size: 10px; margin-left: 12px;">▲ 买入</span>
+          <span style="color: #58A6FF; font-size: 10px; margin-left: 12px;">≡ 持仓</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>📈 金融交易所</h3>
+      <p>Bloomberg Terminal 风格 · 深色终端 · 荧光绿数字跳动 · 等宽字体 · 交易交割单</p>
+    </div>
+  </div>
+
+  <!-- 方向二：蒸汽波复古 -->
+  <div class="card" data-choice="vapor" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background: #1A0B2E; padding: 0; border-radius: 8px; overflow: hidden; border: 2px solid #FF71CE;">
+        <div style="background: linear-gradient(180deg, #FF71CE 0%, #B967FF 100%); padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: #fff; font-family: monospace;">
+          <span>▼ BabaOS v3.1</span>
+          <span>— □ ✕</span>
+        </div>
+        <div style="padding: 20px 16px; text-align: center; position: relative;">
+          <div style="position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px); pointer-events: none;"></div>
+          <div style="border: 2px inset #B967FF; background: #0D0D1A; padding: 16px 12px;">
+            <div style="color: #01CDFE; font-size: 18px; font-weight: 700; text-shadow: 2px 2px #FF71CE;">💩 带薪拉屎.exe</div>
+            <div style="color: #FF71CE; font-size: 24px; margin-top: 8px; font-weight: 900;">02:35</div>
+            <div style="background: #FF71CE; color: #1A0B2E; padding: 6px; margin-top: 8px; font-size: 12px; font-weight: 700;">💰 当前收益: ¥3.42</div>
+            <div style="margin-top: 8px; background: #333; height: 8px; border: 1px inset #555;">
+              <div style="background: #01CDFE; height: 100%; width: 65%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>💾 蒸汽波 · 90s 复古 Mac</h3>
+      <p>Win95 窗口 · CRT 扫描线 · 霓虹粉紫 · 像素风 · 软盘加载 · Turbo 按钮</p>
+    </div>
+  </div>
+
+  <!-- 方向三：实验室报告 -->
+  <div class="card" data-choice="lab" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background: #F8F9FA; padding: 20px 16px; border-radius: 4px; border: 1px solid #DEE2E6; font-family: serif;">
+        <div style="text-align: center; border-bottom: 2px solid #2C3E50; padding-bottom: 8px; margin-bottom: 10px;">
+          <div style="color: #2C3E50; font-size: 10px; letter-spacing: 2px;">EXPERIMENT LOG</div>
+          <div style="color: #2C3E50; font-size: 14px; font-weight: 700;">样本 #042 - 粪便分析</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div style="background: #fff; border: 1px solid #DEE2E6; padding: 8px;">
+            <div style="color: #7F8C8D; font-size: 8px;">实验时长</div>
+            <div style="color: #2C3E50; font-size: 18px; font-weight: 700;">02:35</div>
+          </div>
+          <div style="background: #fff; border: 1px solid #DEE2E6; padding: 8px;">
+            <div style="color: #7F8C8D; font-size: 8px;">经济产出</div>
+            <div style="color: #E74C3C; font-size: 18px; font-weight: 700;">¥3.42</div>
+          </div>
+          <div style="background: #fff; border: 1px solid #DEE2E6; padding: 8px;">
+            <div style="color: #7F8C8D; font-size: 8px;">代谢率</div>
+            <div style="color: #3498DB; font-size: 18px; font-weight: 700;">0.42/h</div>
+          </div>
+          <div style="background: #fff; border: 1px solid #DEE2E6; padding: 8px;">
+            <div style="color: #7F8C8D; font-size: 8px;">效价评级</div>
+            <div style="color: #F39C12; font-size: 18px; font-weight: 700;">★★★☆</div>
+          </div>
+        </div>
+        <div style="background: #3498DB; color: #fff; text-align: center; padding: 4px; margin-top: 8px; font-size: 9px; letter-spacing: 1px;">▼ EXPORT DATA</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>🔬 实验室分析报告</h3>
+      <p>科研论文排版 · 白底 · 衬线字体 · 数据网格 · 正态分布图 · 实验参数面板</p>
+    </div>
+  </div>
+
+  <!-- 方向四：黑胶音乐 -->
+  <div class="card" data-choice="vinyl" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background: #191414; padding: 24px 16px; border-radius: 12px; text-align: center;">
+        <div style="width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(#1DB954 0deg 120deg, #333 120deg 360deg); margin: 0 auto; display: flex; align-items: center; justify-content: center; position: relative;">
+          <div style="width: 24px; height: 24px; background: #191414; border-radius: 50%; border: 2px solid #E8E8E8;"></div>
+          <div style="position: absolute; bottom: -16px; width: 3px; height: 20px; background: #E8E8E8; transform-origin: top center; transform: rotate(25deg); border-radius: 2px;"></div>
+        </div>
+        <div style="color: #E8E8E8; font-size: 16px; font-weight: 700; margin-top: 16px;">带薪拉屎进行曲</div>
+        <div style="color: #1DB954; font-size: 10px; margin-top: 2px;">BabaRecords · 2026</div>
+        <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px; justify-content: center;">
+          <span style="color: #B3B3B3; font-size: 10px;">01:20</span>
+          <div style="flex: 1; max-width: 120px; height: 4px; background: #333; border-radius: 2px; overflow: hidden;">
+            <div style="height: 100%; width: 55%; background: #1DB954; border-radius: 2px;"></div>
+          </div>
+          <span style="color: #E8E8E8; font-size: 10px;">02:35</span>
+        </div>
+        <div style="color: #FF4500; font-size: 18px; font-weight: 900; margin-top: 6px;">收益 ¥3.42</div>
+        <div style="display: flex; gap: 16px; justify-content: center; margin-top: 8px; font-size: 18px;">
+          <span>⏮</span><span>▶</span><span>⏭</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>💿 黑胶唱片 · 音乐波形</h3>
+      <p>Spotify 暗黑 · 唱片转盘 · 波形可视化 · Billboard 排行 · DJ 混音台交互</p>
+    </div>
+  </div>
+</div>

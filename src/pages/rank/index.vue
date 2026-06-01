@@ -1,46 +1,51 @@
 <template>
-  <view class="rank-container" v-if="userStore.user">
-    <!-- 用户总经验卡片 -->
-    <view class="header-card">
-      <text class="label">我的摸鱼总经验值</text>
-      <text class="xp-val">{{ userStore.user.total_xp }} <text class="unit">XP</text></text>
-      <text class="title-lbl">当前职级：{{ userStore.user.current_title }}</text>
-    </view>
+  <view class="page-container" :class="themeStore.themeClass" v-if="userStore.user">
+    <PageTransition>
+      <!-- 我的累计经验值 (对账总额) -->
+      <ThemeCard customClass="xp-board-flat">
+        <text class="label">我的累计{{ themeStore.t('xpProgress') }}</text>
+        <view class="xp-val-box">
+          <NumberTicker class="xp-val" :value="userStore.user.total_xp" :precision="0" />
+          <text class="unit"> XP</text>
+        </view>
+        <view class="title-lbl-flat">当前{{ themeStore.t('rankTitle') }}：{{ userStore.user.current_title }}</view>
+      </ThemeCard>
 
-    <!-- 职级晋升时间轴 -->
-    <view class="rank-list-card">
-      <view class="card-title">摸鱼职业生涯路线</view>
-      <view class="rank-list">
-        <view 
-          class="rank-item" 
-          v-for="item in TITLE_LEVELS" 
-          :key="item.level"
-          :class="getRankClass(item)"
-        >
-          <view class="rank-status-icon">
-            <text v-if="isCurrent(item)">👑</text>
-            <text v-else-if="isUnlocked(item)">✅</text>
-            <text v-else>🔒</text>
-          </view>
-          
-          <view class="rank-info">
-            <view class="rank-header">
-              <text class="rank-name">{{ item.title }}</text>
-              <text class="level-lbl">Lv.{{ item.level }}</text>
+      <!-- 职级晋升时间轴 -->
+      <ThemeCard customClass="rank-list-card-flat">
+        <view class="card-title">{{ rankListTitle }}</view>
+        <view class="rank-list">
+          <view 
+            class="rank-item" 
+            v-for="item in TITLE_LEVELS" 
+            :key="item.level"
+            :class="getRankClass(item)"
+          >
+            <view class="rank-status-icon">
+              <text class="status-marker" v-if="isCurrent(item)">●</text>
+              <text class="status-marker" v-else-if="isUnlocked(item)">○</text>
+              <text class="status-marker" v-else>■</text>
             </view>
-            <text class="rank-xp-req">解锁门槛: {{ item.minXP }} XP</text>
             
-            <!-- 如果是当前职级且未满级，显示进度条 -->
-            <view class="mini-progress-section" v-if="isCurrent(item) && nextTitle">
-              <view class="mini-progress-track">
-                <view class="mini-progress-bar" :style="{ width: xpPercent + '%' }"></view>
+            <view class="rank-info">
+              <view class="rank-header">
+                <text class="rank-name">{{ item.title }}</text>
+                <text class="level-lbl">Lv.{{ item.level }}</text>
               </view>
-              <text class="xp-needed-hint">还需 {{ nextTitle.minXP - userStore.user.total_xp }} XP 升级</text>
+              <text class="rank-xp-req">{{ thresholdLabel }}: {{ item.minXP }} XP</text>
+              
+              <!-- 如果是当前职级且未满级，显示进度条 -->
+              <view class="mini-progress-section" v-if="isCurrent(item) && nextTitle">
+                <view class="mini-progress-track">
+                  <view class="mini-progress-bar" :style="{ width: xpPercent + '%' }"></view>
+                </view>
+                <text class="xp-needed-hint">还需 {{ nextTitle.minXP - userStore.user.total_xp }} XP 升级</text>
+              </view>
             </view>
           </view>
         </view>
-      </view>
-    </view>
+      </ThemeCard>
+    </PageTransition>
   </view>
 </template>
 
@@ -48,9 +53,16 @@
 import { computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '../../stores/user'
+import { useThemeStore } from '../../stores/theme'
 import { TITLE_LEVELS, getNextTitle } from '../../utils/salary-calculator'
 
+// Components
+import PageTransition from '../../components/PageTransition.vue'
+import ThemeCard from '../../components/ThemeCard.vue'
+import NumberTicker from '../../components/NumberTicker.vue'
+
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 
 onShow(() => {
   userStore.loadProfile()
@@ -78,82 +90,97 @@ const nextTitle = computed(() => {
   return getNextTitle(userStore.user.current_level)
 })
 
-// 当前经验值比例
+// Dynamic labels
+const rankListTitle = computed(() => {
+  return themeStore.isStock ? '交易席位进阶路线' : '学术研究职称地图'
+})
+
+const thresholdLabel = computed(() => {
+  return themeStore.isStock ? '保证金门槛' : '解锁所需经验'
+})
+
 const xpPercent = computed(() => {
-  if (!userStore.user || !nextTitle.value) return 100
-  const currentLevelDef = TITLE_LEVELS.find(t => t.level === userStore.user!.current_level)
-  const min = currentLevelDef ? currentLevelDef.minXP : 0
-  const range = nextTitle.value.minXP - min
-  const progressed = userStore.user.total_xp - min
-  return Math.min(Math.max(Math.round((progressed / range) * 100), 0), 100)
+  if (!userStore.user) return 0
+  const currentLevelObj = TITLE_LEVELS.find(l => l.level === userStore.user?.current_level)
+  if (!currentLevelObj || !nextTitle.value) return 100
+  
+  const currentMin = currentLevelObj.minXP
+  const nextMin = nextTitle.value.minXP
+  const earned = userStore.user.total_xp - currentMin
+  const totalNeeded = nextMin - currentMin
+  
+  return Math.min(Math.max((earned / totalNeeded) * 100, 0), 100)
 })
 </script>
 
 <style lang="scss" scoped>
-.rank-container {
-  padding: 32rpx;
+.page-container {
+  padding: 40rpx;
   min-height: 100vh;
-  background-color: $bg-primary;
+  box-sizing: border-box;
+  background-color: var(--bg-primary);
   display: flex;
   flex-direction: column;
-  gap: 32rpx;
-  box-sizing: border-box;
+  gap: 40rpx;
 }
 
-// 头部经验值卡
-.header-card {
-  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
-  border-radius: $radius-lg;
-  padding: 48rpx;
-  box-shadow: $shadow-md;
-  color: #ffffff;
+// 头部对账单总额板
+.xp-board-flat {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 20rpx;
 
   .label {
-    font-size: 24rpx;
-    opacity: 0.85;
+    font-size: 20rpx;
+    font-weight: 800;
+    color: var(--text-secondary);
     letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 
-  .xp-val {
-    font-size: 80rpx;
-    font-weight: 800;
-    margin: 16rpx 0;
-    text-shadow: 0 4rpx 10rpx rgba(0,0,0,0.1);
+  .xp-val-box {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    padding: 10rpx 0;
+
+    .xp-val {
+      font-size: 64rpx;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--accent);
+    }
 
     .unit {
-      font-size: 32rpx;
-      font-weight: bold;
+      font-size: 24rpx;
+      font-weight: 800;
+      margin-left: 8rpx;
+      color: var(--accent);
     }
   }
 
-  .title-lbl {
-    font-size: 28rpx;
+  .title-lbl-flat {
+    font-size: 22rpx;
     font-weight: bold;
-    background-color: rgba(255, 255, 255, 0.2);
-    padding: 8rpx 32rpx;
-    border-radius: $radius-round;
+    border-top: 1rpx solid var(--border);
+    padding-top: 20rpx;
+    text-align: center;
+    color: var(--text-primary);
   }
 }
 
-// 职业路线卡
-.rank-list-card {
-  background-color: $bg-card;
-  border-radius: $radius-lg;
-  padding: 40rpx;
-  box-shadow: $shadow-sm;
-  border: 1rpx solid #ffe8d8;
+// 路线卡
+.rank-list-card-flat {
+  display: flex;
+  flex-direction: column;
 
   .card-title {
-    font-size: 28rpx;
-    font-weight: bold;
-    color: $text-secondary;
+    font-size: 20rpx;
+    font-weight: 800;
+    color: var(--text-secondary);
     margin-bottom: 40rpx;
-    border-left: 6rpx solid $color-primary;
-    padding-left: 16rpx;
-    line-height: 1;
+    letter-spacing: 2rpx;
+    text-transform: uppercase;
   }
 }
 
@@ -167,17 +194,22 @@ const xpPercent = computed(() => {
   display: flex;
   gap: 24rpx;
   padding: 24rpx;
-  border-radius: $radius-md;
-  border: 1rpx solid #eeeeee;
-  background-color: #fafafa;
+  border: 1rpx solid var(--border);
+  background-color: transparent;
   transition: all 0.2s ease;
 
   .rank-status-icon {
-    font-size: 40rpx;
+    font-size: 24rpx;
     display: flex;
     align-items: flex-start;
     justify-content: center;
     line-height: 1.2;
+
+    .status-marker {
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-weight: bold;
+    }
   }
 
   .rank-info {
@@ -192,41 +224,43 @@ const xpPercent = computed(() => {
       align-items: center;
 
       .rank-name {
-        font-size: 28rpx;
-        font-weight: bold;
-        color: $text-primary;
+        font-size: 24rpx;
+        font-weight: 800;
+        color: var(--text-primary);
       }
 
       .level-lbl {
-        font-size: 20rpx;
-        color: $text-hint;
+        font-size: 18rpx;
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
         font-weight: bold;
       }
     }
 
     .rank-xp-req {
-      font-size: 22rpx;
-      color: $text-hint;
+      font-size: 20rpx;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
     }
   }
 }
 
 // 激活态职级
 .rank-current {
-  background: linear-gradient(135deg, #fffcf6 0%, #fff6e4 100%);
-  border-color: #ffd700;
-  box-shadow: 0 4rpx 16rpx rgba(255, 215, 0, 0.2);
+  border-color: var(--accent);
+  background-color: rgba(255, 255, 255, 0.02);
+
+  .rank-status-icon .status-marker {
+    color: var(--accent);
+  }
 
   .rank-info .rank-header .rank-name {
-    color: $color-primary-dark;
-    font-size: 30rpx;
+    color: var(--accent);
+    font-size: 26rpx;
   }
 
   .rank-info .rank-header .level-lbl {
-    color: #ffffff;
-    background-color: $color-primary;
-    padding: 2rpx 12rpx;
-    border-radius: 4rpx;
+    color: var(--accent);
   }
 
   .mini-progress-section {
@@ -236,40 +270,36 @@ const xpPercent = computed(() => {
     gap: 8rpx;
 
     .mini-progress-track {
-      height: 10rpx;
-      background-color: #e0e0e0;
-      border-radius: 999rpx;
+      height: 6rpx;
+      background-color: var(--border);
       overflow: hidden;
 
       .mini-progress-bar {
         height: 100%;
-        background-color: $color-primary;
-        border-radius: 999rpx;
+        background-color: var(--accent);
       }
     }
 
     .xp-needed-hint {
       font-size: 18rpx;
-      color: $text-hint;
+      color: var(--text-secondary);
       text-align: right;
+      font-family: var(--font-mono);
     }
   }
 }
 
 // 已解锁状态
 .rank-unlocked {
-  background-color: #ffffff;
-  border-color: #ffe0cc;
-
   .rank-info .rank-header .rank-name {
-    color: $text-primary;
+    color: var(--text-primary);
   }
 }
 
 // 锁定状态
 .rank-locked {
-  opacity: 0.5;
-  background-color: #f7f7f7;
-  filter: grayscale(100%);
+  opacity: 0.4;
+  background-color: var(--bg-primary);
+  filter: grayscale(1);
 }
 </style>
